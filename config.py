@@ -39,6 +39,29 @@ INSTAGRAM_ACCOUNT_ID = os.getenv("INSTAGRAM_ACCOUNT_ID", "")
 JAMENDO_CLIENT_ID = os.getenv("JAMENDO_CLIENT_ID", "")
 
 # ─────────────────────────────────────────────
+#  ROYALTY-FREE STOCK SOURCES  (all FREE — legal to reuse)
+# ─────────────────────────────────────────────
+# These let REEL GOD pull HD b-roll video, photos, and music from the open
+# internet WITHOUT copyright risk (great when you don't have your own footage
+# and don't want to scrape copyrighted anime). All keys are free:
+#   - Pexels:  https://www.pexels.com/api/          (video + photos)
+#   - Pixabay: https://pixabay.com/api/docs/        (video + photos + music)
+# Leave blank to disable a source; the app degrades gracefully and always keeps
+# the "upload your own" path working.
+PEXELS_API_KEY = os.getenv("PEXELS_API_KEY", "")
+PIXABAY_API_KEY = os.getenv("PIXABAY_API_KEY", "")
+
+
+def stock_sources_available() -> list:
+    """Return the list of configured royalty-free stock providers."""
+    sources = []
+    if PEXELS_API_KEY:
+        sources.append("pexels")
+    if PIXABAY_API_KEY:
+        sources.append("pixabay")
+    return sources
+
+# ─────────────────────────────────────────────
 #  YOUTUBE / yt-dlp DOWNLOAD SETTINGS
 # ─────────────────────────────────────────────
 # YouTube blocks anonymous downloads from datacenter/server IPs ("Sign in to

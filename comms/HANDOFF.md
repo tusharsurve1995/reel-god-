@@ -6,11 +6,39 @@
 ## Current Status
 - **Last Active Agent**: Devin (Cascade/Backup #2 role)
 - **Session Date**: 2026-07-04
-- **Reason for Handoff**: Built the Instagram Reel Creator feature; ready for review/testing on commander's PC
+- **Reason for Handoff**: Added legal royalty-free content + music sources to the Reel Creator; docs + how-to-verify guide written; ready for review/testing.
 
 ---
 
-## What Was Done — 2026-07-04 (Devin)
+## What Was Done — 2026-07-04 (Devin, session 2: royalty-free sources)
+
+### ✅ New legal, server-friendly content sources
+- **`generator/stock_fetcher.py` (NEW)** — `StockFetcher` pulls HD **royalty-free**
+  video + photos from **Pexels** and **Pixabay** (both free API keys). Caches to
+  `data/stock_clips/`, degrades gracefully to `None` when no key is set, and maps
+  each mood/style to good cinematic search terms.
+- **`generator/reel_studio.py`** — new `source="stock"` path: fetch stock video
+  (or fall back to a stock photo → Ken-Burns base clip) for the chosen format/mood.
+- **`music/music_fetcher.py`** — music now prefers **Jamendo Creative-Commons**
+  (`_jamendo_fetch`, legal + works on servers) BEFORE YouTube search and SoundHelix.
+  Added `GENRE_TO_JAMENDO_TAGS` mapping all 8 genres to CC tags.
+- **`config.py`** — `PEXELS_API_KEY`, `PIXABAY_API_KEY`, `stock_sources_available()`.
+- **Dashboard** — new **🎥 Stock (royalty-free)** source tab + `/api/creator/stock`
+  endpoint; `/api/creator/options` now reports which stock sources are configured,
+  and the UI shows a ✅/⚠️ status line.
+- **`docs/CONTENT_SOURCES.md` (NEW)** — beginner guide: what changed, how to get the
+  free keys, **how to verify everything works** (CLI + dashboard + ffprobe), and a
+  comparison of shipping REEL GOD as an **agent** vs a **desktop/web application**.
+
+### ⚖️ Deliberately NOT done (declined for legal/ToS reasons)
+- **ReVanced / Vanced / YouTube-Premium bypass** — violates YouTube ToS; not integrated.
+- **Anime piracy/streaming sites (AnimeSalt, gogoanime, etc.)** — reposting copyrighted
+  anime is infringement and gets Instagram accounts banned. Kept the existing anime tab
+  (personal use) but steered the product to legal **Stock** + **Upload** paths.
+
+---
+
+## What Was Done — 2026-07-04 (Devin, session 1: Instagram Reel Creator)
 
 ### ✅ Instagram Reel Creator (Phase 6 dashboard expansion)
 - **Dashboard**: removed the header "Instagram Link" button; added an **Instagram Reel Creator** panel.

@@ -234,6 +234,31 @@ def create_reel(
                 "Could not fetch an anime clip. On a server, YouTube may require "
                 "cookies — set YTDLP_COOKIES_FILE or YTDLP_COOKIES_FROM_BROWSER."
             )
+    elif source == "stock":
+        report(20, "Fetching royalty-free HD footage from the internet...")
+        from generator.stock_fetcher import StockFetcher
+        fetcher = StockFetcher()
+        if not fetcher.available():
+            raise RuntimeError(
+                "No royalty-free stock source is configured. Add a free "
+                "PEXELS_API_KEY or PIXABAY_API_KEY (see config.py) to fetch HD "
+                "video from the internet, or use the Upload tab instead."
+            )
+        want_vertical = aspect == "9:16"
+        query = fetcher.query_for_style(style, instruction)
+        stock_video = fetcher.fetch_video(query, want_vertical=want_vertical)
+        if stock_video:
+            video_path = stock_video
+        else:
+            report(30, "No video match — trying a royalty-free photo...")
+            stock_photo = fetcher.fetch_photo(query)
+            if not stock_photo:
+                raise RuntimeError(
+                    "Could not fetch any royalty-free media for "
+                    f"'{query}'. Try a different directive or the Upload tab."
+                )
+            tmp_base = image_to_base_video(stock_photo)
+            video_path = tmp_base
     elif source == "upload":
         if not media_path or not Path(media_path).exists():
             raise RuntimeError("No uploaded media found.")

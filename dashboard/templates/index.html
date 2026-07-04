@@ -38,8 +38,9 @@
             </div>
 
             <!-- SOURCE TABS -->
-            <div style="display: flex; gap: 0.5rem;">
+            <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
                 <button class="btn creator-tab creator-tab-active" id="tab-anime" onclick="switchCreatorTab('anime')" style="flex: 1; justify-content: center;">🌸 From Anime (internet)</button>
+                <button class="btn creator-tab" id="tab-stock" onclick="switchCreatorTab('stock')" style="flex: 1; justify-content: center;">🎥 Stock (royalty-free)</button>
                 <button class="btn creator-tab" id="tab-upload" onclick="switchCreatorTab('upload')" style="flex: 1; justify-content: center;">📤 Upload Photo / Video</button>
             </div>
 
@@ -49,6 +50,17 @@
                 <select id="creator-anime" class="creator-select">
                     <option value="">🎲 Auto — let REEL GOD choose</option>
                 </select>
+            </div>
+
+            <!-- STOCK SOURCE -->
+            <div id="creator-stock-source" style="display: none; flex-direction: column; gap: 0.4rem;">
+                <div style="border: 1px solid rgba(0, 240, 255, 0.2); border-radius: 10px; padding: 0.9rem; background: rgba(0,0,0,0.12);">
+                    <span style="font-weight: 600; display: block; margin-bottom: 0.3rem;">🎥 Royalty-free HD footage</span>
+                    <span style="font-size: 0.8rem; color: var(--text-secondary);" id="creator-stock-status">
+                        Pulls copyright-safe video/photos from Pexels &amp; Pixabay. Type what you want in the
+                        <b>Creative directive</b> box below (e.g. "sunrise over mountains"), or leave it blank to match your Mood/Style.
+                    </span>
+                </div>
             </div>
 
             <!-- UPLOAD SOURCE -->

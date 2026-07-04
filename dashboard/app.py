@@ -602,7 +602,29 @@ def creator_options():
         "styles": CREATOR_STYLES,
         "formats": CREATOR_FORMATS,
         "genres": CREATOR_GENRES,
+        "stock_sources": config.stock_sources_available(),
     })
+
+@app.route('/api/creator/stock', methods=['POST'])
+@login_required
+def creator_stock():
+    """Create a Reel/Post/Story from royalty-free stock footage (Pexels/Pixabay)."""
+    if not config.stock_sources_available():
+        return jsonify({
+            "success": False,
+            "error": "No royalty-free stock source configured. Add a free "
+                     "PEXELS_API_KEY or PIXABAY_API_KEY, then restart.",
+        }), 400
+    data = request.json or {}
+    kwargs = {
+        "source": "stock",
+        "style": data.get("style", "epic_action"),
+        "fmt": data.get("format", "reel"),
+        "genre": data.get("genre", "auto"),
+        "instruction": data.get("instruction", ""),
+    }
+    threading.Thread(target=_run_creator_job, args=(kwargs,), daemon=True).start()
+    return jsonify({"success": True, "message": "Creating from royalty-free stock in background."})
 
 def _run_creator_job(kwargs: dict):
     """Background worker that runs reel_studio.create_reel and streams progress."""

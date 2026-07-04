@@ -45,6 +45,10 @@
 | Multi-genre music picker (Bollywood/Hollywood/Pop/Instrumental/Action/Romantic/Worldwide) | Devin | 2026-07-04 |
 | Upload photo/video → Post/Story/Reel | Devin | 2026-07-04 |
 | Fix: yt-dlp/imageio-ffmpeg missing from requirements; Co-Pilot posts INSERT | Devin | 2026-07-04 |
+| Royalty-free stock source (Pexels + Pixabay) — generator/stock_fetcher.py | Devin | 2026-07-04 |
+| Jamendo CC music preferred first in music_fetcher (legal, server-friendly) | Devin | 2026-07-04 |
+| 🎥 Stock (royalty-free) creator tab + /api/creator/stock endpoint | Devin | 2026-07-04 |
+| docs/CONTENT_SOURCES.md — sources + how-to-verify + agent/app guide | Devin | 2026-07-04 |
 
 ---
 
