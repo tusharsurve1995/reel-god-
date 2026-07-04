@@ -47,6 +47,11 @@
 | Fix: yt-dlp/imageio-ffmpeg missing from requirements; Co-Pilot posts INSERT | Devin | 2026-07-04 |
 | Royalty-free stock source (Pexels + Pixabay) — generator/stock_fetcher.py | Devin | 2026-07-04 |
 | Jamendo CC music preferred first in music_fetcher (legal, server-friendly) | Devin | 2026-07-04 |
+| Cross-platform: responsive dashboard UI (mobile/tablet) | Devin | 2026-07-04 |
+| Cross-platform: PWA (installable app — manifest, service worker, icons) | Devin | 2026-07-04 |
+| Secure multi-account login (hashed passwords) — dashboard/auth.py | Devin | 2026-07-04 |
+| In-app Settings page for API keys (no restart) + change password / add user | Devin | 2026-07-04 |
+| Deploy config: Procfile + render.yaml + gunicorn/eventlet + $PORT | Devin | 2026-07-04 |
 | 🎥 Stock (royalty-free) creator tab + /api/creator/stock endpoint | Devin | 2026-07-04 |
 | docs/CONTENT_SOURCES.md — sources + how-to-verify + agent/app guide | Devin | 2026-07-04 |
 

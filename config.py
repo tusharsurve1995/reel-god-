@@ -165,8 +165,11 @@ MAX_HASHTAGS = 30  # Instagram limit
 # ─────────────────────────────────────────────
 DASHBOARD_HOST = "0.0.0.0"
 
-DASHBOARD_PORT = 5000
-DASHBOARD_SECRET_KEY = "reel-god-secret-key-change-this"
+# Hosting platforms inject the port to bind via $PORT; falls back to 5000 locally.
+DASHBOARD_PORT = int(os.getenv("PORT", "5000"))
+# Set DASHBOARD_SECRET_KEY in the environment for a secure, stable session secret
+# when deployed publicly (Render can auto-generate one).
+DASHBOARD_SECRET_KEY = os.getenv("DASHBOARD_SECRET_KEY", "reel-god-secret-key-change-this")
 
 # ─────────────────────────────────────────────
 #  VALIDATION

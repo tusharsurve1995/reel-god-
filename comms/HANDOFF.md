@@ -6,7 +6,45 @@
 ## Current Status
 - **Last Active Agent**: Devin (Cascade/Backup #2 role)
 - **Session Date**: 2026-07-04
-- **Reason for Handoff**: Added legal royalty-free content + music sources to the Reel Creator; docs + how-to-verify guide written; ready for review/testing.
+- **Reason for Handoff**: Made REEL GOD a cross-platform, installable web app (responsive UI + PWA), added a secure multi-account login, an in-app Settings page for API keys, and deploy config (Render). PR #3 (royalty-free sources) is merged into main.
+
+---
+
+## What Was Done — 2026-07-04 (Devin, session 3: use-it-everywhere web app)
+
+Goal: let the commander use REEL GOD on **mobile, laptop, anywhere** from **one common codebase**.
+
+### ✅ Responsive UI (mobile-friendly)
+- `dashboard/static/style.css` — creator "Format/Style/Music" row and copilot keyframe
+  grid now stack on phones; source tabs go full-width; smaller headings/padding on
+  narrow screens. Inline grids given classes (`.creator-grid-3`, `.copilot-keyframes-grid`).
+
+### ✅ PWA (installable on phone + laptop, no App Store)
+- `dashboard/static/manifest.webmanifest`, `dashboard/static/sw.js` (service worker:
+  cache-first static, network-only pages/API so live agent state is never stale).
+- `dashboard/static/icons/` — generated app icons (192/512/apple-touch/favicon).
+- Served at root via `/manifest.webmanifest` and `/sw.js` routes (`Service-Worker-Allowed: /`).
+- PWA `<head>` + SW registration added to `index.html` / `login.html`.
+
+### ✅ Secure multi-account login (safe to expose publicly)
+- `dashboard/auth.py` (NEW) — `users` table in SQLite, **hashed** passwords
+  (werkzeug), bootstrap admin seeded from `COMMANDER_USERNAME`/`COMMANDER_PASSWORD`.
+- `login` now takes username + password; `/register` (open only on first run, then
+  logged-in add-user); one shared workspace.
+
+### ✅ In-app Settings page (`/settings`)
+- Set free API keys (Gemini/Pexels/Pixabay/Jamendo) in the UI — saved to `.env` +
+  live `os.environ` + `config` module, so they apply **without a restart**.
+- Change your password; add more logins. Endpoints: `/api/settings`,
+  `/api/account/password`, `/api/account/create`.
+
+### ✅ Deploy config
+- `Procfile`, `render.yaml` (free tier), `gunicorn`+`eventlet` in requirements,
+  `$PORT` + `DASHBOARD_SECRET_KEY` read from env.
+
+### Next steps / ideas
+- Deploy to Render (needs the commander's account) → permanent public URL.
+- Optional: full multi-tenant (separate content per account) is a bigger refactor.
 
 ---
 

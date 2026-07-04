@@ -22,6 +22,10 @@ temp_media/
 *.webp
 *.log
 
+# ...but the PWA app icons must be committed (they're small, versioned assets)
+!dashboard/static/icons/
+!dashboard/static/icons/*.png
+
 
 # Pycache and bytecode
 __pycache__/
