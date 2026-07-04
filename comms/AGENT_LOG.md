@@ -298,4 +298,37 @@ convert into a Post/Story/Reel — all high quality.
 
 ---
 
+## 2026-07-04 — Devin (Backup #2) — Session 2: legal royalty-free sources
+
+### Goal (from commander)
+Add more download resources for "the best content from all over the internet",
+update docs, do end-to-end testing, explain how to verify it works, and advise on
+shipping this as an agent vs an application.
+
+### Decision
+Declined ReVanced/YouTube-Premium bypass and anime piracy-site scrapers (ToS +
+copyright + Instagram bans). Instead added **legal, free, server-friendly** sources
+that align with the "FREE tools only" rule.
+
+### Files created
+- `generator/stock_fetcher.py` — Pexels + Pixabay royalty-free HD video/photo fetcher
+- `docs/CONTENT_SOURCES.md` — sources overview + how-to-verify + agent/app guide
+
+### Files changed
+- `config.py` — `PEXELS_API_KEY`, `PIXABAY_API_KEY`, `stock_sources_available()`
+- `generator/reel_studio.py` — new `source="stock"` path (video → photo fallback)
+- `music/music_fetcher.py` — Jamendo CC music preferred first (`_jamendo_fetch`,
+  `GENRE_TO_JAMENDO_TAGS`) in both `fetch_by_genre` and `fetch_for_style`
+- `dashboard/app.py` — `/api/creator/stock` endpoint; options report stock sources
+- `dashboard/templates/index.html` — new 🎥 Stock (royalty-free) source tab + status
+- `dashboard/static/app.js` — stock tab wiring + availability status line
+
+### Verified
+✅ All modules import / py_compile clean
+✅ `stock_sources_available()` and `StockFetcher` behave correctly with no keys (return [] / None, no crash)
+✅ `_jamendo_fetch` returns None gracefully with no key
+⏳ Live Pexels/Pixabay/Jamendo fetch pending commander's free API keys (requested)
+
+---
+
 <!-- NEXT AGENT: Append your session below this line -->

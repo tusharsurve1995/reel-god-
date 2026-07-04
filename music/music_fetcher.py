@@ -245,6 +245,21 @@ MUSIC_BY_GENRE = {
     ],
 }
 
+# ── GENRE → JAMENDO TAGS ──────────────────────────────────────────────────────
+# Jamendo hosts Creative-Commons music that is 100% legal to reuse and — unlike
+# YouTube — is reachable from servers/datacenters. Bollywood/Hollywood aren't on
+# Jamendo (those are commercial catalogues), so we map them to the closest
+# royalty-free vibe (world / cinematic).
+GENRE_TO_JAMENDO_TAGS = {
+    "bollywood":    ["world", "indian", "cinematic"],
+    "hollywood":    ["cinematic", "soundtrack", "orchestral"],
+    "pop":          ["pop", "electronic", "happy"],
+    "instrumental": ["instrumental", "piano", "ambient"],
+    "action":       ["epic", "rock", "energetic"],
+    "romantic":     ["romantic", "love", "acoustic"],
+    "worldwide":    ["world", "ethnic", "cinematic"],
+}
+
 # Map reel styles → a natural-language mood word used to flavour genre queries
 STYLE_TO_MOOD_WORD = {
     "epic_action":    "epic",
@@ -361,6 +376,11 @@ class MusicFetcher:
                 if result:
                     return result
 
+        # Legal, server-friendly first choice: Jamendo Creative-Commons.
+        jam = self._jamendo_fetch("instrumental", style)
+        if jam:
+            return jam
+
         # Use mood priority list
         mood_options = ANIME_MUSIC_MAP.get(style, ["epic_action_hollywood"])
         for mood in mood_options:
@@ -385,6 +405,10 @@ class MusicFetcher:
 
         genre ∈ {auto, bollywood, hollywood, pop, instrumental, action, romantic, worldwide}.
         'auto' (or unknown) falls back to the smart anime/style matcher.
+
+        Order of preference (best legal source first): Jamendo CC music (works on
+        servers) → YouTube search (may be blocked on datacenter IPs) → smart
+        matcher → SoundHelix.
         """
         genre = (genre or "auto").strip().lower()
         if genre in ("", "auto", "any", "smart"):
@@ -395,6 +419,12 @@ class MusicFetcher:
             console.print(f"[yellow]Unknown genre '{genre}', using smart match[/]")
             return self.fetch_for_style(style, anime=anime)
 
+        # 1. Legal, server-friendly: Jamendo Creative-Commons catalogue.
+        jam = self._jamendo_fetch(genre, style)
+        if jam:
+            return jam
+
+        # 2. YouTube search for the exact genre × mood phrase.
         mood_word = STYLE_TO_MOOD_WORD.get(style, style.replace("_", " "))
         template = random.choice(pool)
         query = template.format(mood=mood_word)
@@ -404,8 +434,68 @@ class MusicFetcher:
         result = self._download_audio(query, safe_cache)
         if result:
             return result
-        # Fall back to the smart matcher, then SoundHelix
+        # 3. Fall back to the smart matcher, then SoundHelix
         return self.fetch_for_style(style, anime=anime)
+
+    def _jamendo_fetch(self, genre: str, style: str) -> Optional[Path]:
+        """Download a Creative-Commons track from Jamendo for genre × style.
+
+        Returns None (never raises) when no key is set or the request fails, so
+        callers can fall through to other sources.
+        """
+        client_id = getattr(config, "JAMENDO_CLIENT_ID", "")
+        if not client_id or client_id == "PASTE_YOUR_KEY_HERE":
+            return None
+
+        import requests
+        tags = list(GENRE_TO_JAMENDO_TAGS.get(genre, [genre]))
+        mood_tag = STYLE_TO_MOOD_WORD.get(style, "").split()[0] if style else ""
+        if mood_tag:
+            tags.append(mood_tag)
+
+        safe_cache = re.sub(r"[^a-z0-9_]", "", f"jamendo_{genre}_{style}".lower())[:40]
+        # Reuse a cached Jamendo track for this genre+style if we already have one.
+        cached = list(self.music_dir.glob(f"{safe_cache}_*.mp3"))
+        if cached:
+            track = random.choice(cached)
+            if track.stat().st_size > 100_000:
+                console.print(f"[green]Jamendo cached:[/] {track.name}")
+                return track
+
+        try:
+            resp = requests.get(
+                "https://api.jamendo.com/v3.0/tracks/",
+                params={
+                    "client_id": client_id,
+                    "format": "json",
+                    "limit": 10,
+                    "order": "popularity_total",
+                    "fuzzytags": "+".join(tags),
+                    "vocalinstrumental": "instrumental",
+                    "audioformat": "mp32",
+                },
+                timeout=15,
+            )
+            resp.raise_for_status()
+            results = [t for t in resp.json().get("results", []) if t.get("audio")]
+            if not results:
+                console.print(f"[yellow]Jamendo: no CC tracks for {genre}/{style}[/]")
+                return None
+            track = random.choice(results)
+            dest = self.music_dir / f"{safe_cache}_{track.get('id', 'x')}.mp3"
+            console.print(f"[bold magenta]Jamendo [{genre} · {style}]:[/] {track.get('name', '?')} — {track.get('artist_name', '?')}")
+            with requests.get(track["audio"], stream=True, timeout=45) as audio:
+                audio.raise_for_status()
+                with open(dest, "wb") as fh:
+                    for chunk in audio.iter_content(chunk_size=1 << 16):
+                        fh.write(chunk)
+            if dest.stat().st_size > 100_000:
+                console.print(f"[green]✓ Jamendo track saved:[/] {dest.name}")
+                return dest
+            dest.unlink(missing_ok=True)
+        except Exception as e:
+            console.print(f"[yellow]Jamendo fetch failed: {str(e)[:60]}[/]")
+        return None
 
     def fetch_by_mood(self, mood: str, style: str = "epic_action") -> Optional[Path]:
         """Download music by explicit mood name."""

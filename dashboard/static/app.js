@@ -1108,6 +1108,16 @@ document.addEventListener('DOMContentLoaded', () => {
                 const o = document.createElement('option');
                 o.value = g; o.textContent = GENRE_LABEL[g] || pretty(g); genreSel.appendChild(o);
             });
+            const stockStatus = document.getElementById('creator-stock-status');
+            const sources = data.stock_sources || [];
+            if (stockStatus && sources.length === 0) {
+                stockStatus.innerHTML = '⚠️ No stock source configured yet. Add a free ' +
+                    '<b>PEXELS_API_KEY</b> or <b>PIXABAY_API_KEY</b> and restart to enable this. ' +
+                    'Until then, use the <b>Upload</b> tab.';
+            } else if (stockStatus && sources.length) {
+                stockStatus.innerHTML = '✅ Sources ready: <b>' + sources.join(', ') + '</b>. ' +
+                    'Type a directive below (e.g. "sunrise over mountains") or leave blank to match your Mood/Style.';
+            }
         }).catch(e => logToConsole('Failed to load creator options: ' + e, 'error'));
     }
     loadCreatorOptions();
@@ -1120,15 +1130,21 @@ document.addEventListener('DOMContentLoaded', () => {
     window.switchCreatorTab = (tab) => {
         creatorTab = tab;
         const anime = document.getElementById('creator-anime-source');
+        const stock = document.getElementById('creator-stock-source');
         const upload = document.getElementById('creator-upload-source');
         const tA = document.getElementById('tab-anime');
+        const tS = document.getElementById('tab-stock');
         const tU = document.getElementById('tab-upload');
+        anime.style.display = 'none'; stock.style.display = 'none'; upload.style.display = 'none';
+        tA.classList.remove('creator-tab-active');
+        tS.classList.remove('creator-tab-active');
+        tU.classList.remove('creator-tab-active');
         if (tab === 'anime') {
-            anime.style.display = 'flex'; upload.style.display = 'none';
-            tA.classList.add('creator-tab-active'); tU.classList.remove('creator-tab-active');
+            anime.style.display = 'flex'; tA.classList.add('creator-tab-active');
+        } else if (tab === 'stock') {
+            stock.style.display = 'flex'; tS.classList.add('creator-tab-active');
         } else {
-            anime.style.display = 'none'; upload.style.display = 'flex';
-            tU.classList.add('creator-tab-active'); tA.classList.remove('creator-tab-active');
+            upload.style.display = 'flex'; tU.classList.add('creator-tab-active');
         }
     };
 
@@ -1167,6 +1183,8 @@ document.addEventListener('DOMContentLoaded', () => {
         if (creatorTab === 'anime') {
             url = '/api/creator/anime';
             payload.anime = document.getElementById('creator-anime').value;
+        } else if (creatorTab === 'stock') {
+            url = '/api/creator/stock';
         } else {
             if (!creatorUploadFilepath) { alert('Please upload a photo or video first.'); return; }
             url = '/api/creator/compile-upload';
