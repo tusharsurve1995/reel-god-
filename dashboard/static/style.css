@@ -568,3 +568,34 @@ video {
   }
 }
 
+
+/* ── Instagram Reel Creator ─────────────────────────────── */
+.creator-select {
+  width: 100%;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 8px;
+  color: white;
+  padding: 0.6rem 1rem;
+  font-family: inherit;
+  font-size: 0.9rem;
+  outline: none;
+}
+.creator-select:focus {
+  border-color: rgba(0, 240, 255, 0.5);
+}
+.creator-select option {
+  background: #14151f;
+  color: white;
+}
+.creator-tab {
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  color: var(--text-secondary);
+  font-weight: 600;
+}
+.creator-tab-active {
+  background: rgba(0, 240, 255, 0.12);
+  border-color: rgba(0, 240, 255, 0.5);
+  color: var(--accent-cyan);
+}

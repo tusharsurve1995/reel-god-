@@ -554,8 +554,8 @@ def copilot_compile():
                 post_id = None
                 with get_brain().memory._connect() as conn:
                     cursor = conn.execute(
-                        "INSERT INTO posts (title, caption, video_path, scheduled_time, status) VALUES (?, ?, ?, datetime('now'), 'approved')",
-                        (reel_meta["title"], reel_meta["caption"], str(final_path))
+                        "INSERT INTO posts (idea_id, title, style, caption, video_path, posted_at) VALUES (NULL, ?, ?, ?, ?, datetime('now'))",
+                        (reel_meta["title"], reel_meta.get("style", "custom"), reel_meta["caption"], str(final_path))
                     )
                     post_id = cursor.lastrowid
                 
@@ -576,6 +576,109 @@ def copilot_compile():
     thread = threading.Thread(target=run_copilot_compilation)
     thread.start()
     return jsonify({"success": True, "message": "Co-pilot synthesis started in background."})
+
+# ── INSTAGRAM REEL CREATOR API ─────────────────────────────────────────
+# Unified creator: build a Reel / Post / Story from anime (internet) or an
+# uploaded photo/video, with any music genre. Powered by generator.reel_studio.
+
+CREATOR_STYLES = [
+    "epic_action", "emotional", "romance", "dark_cinematic",
+    "motivational", "mystical",
+]
+CREATOR_FORMATS = ["reel", "post", "story"]
+CREATOR_GENRES = [
+    "auto", "bollywood", "hollywood", "pop",
+    "instrumental", "action", "romantic", "worldwide",
+]
+
+@app.route('/api/creator/options')
+@login_required
+def creator_options():
+    """Dropdown options for the Reel Creator UI."""
+    from generator.anime_fetcher import ANIME_SEARCHES
+    animes = [{"key": k, "label": k.replace("_", " ").title()} for k in sorted(ANIME_SEARCHES.keys())]
+    return jsonify({
+        "animes": animes,
+        "styles": CREATOR_STYLES,
+        "formats": CREATOR_FORMATS,
+        "genres": CREATOR_GENRES,
+    })
+
+def _run_creator_job(kwargs: dict):
+    """Background worker that runs reel_studio.create_reel and streams progress."""
+    from generator import reel_studio
+    def progress_handler(percent, stage):
+        socketio.emit('creator_progress', {'percent': percent, 'stage': stage})
+    try:
+        socketio.emit('creator_status', {'status': 'started'})
+        result = reel_studio.create_reel(get_brain(), progress_cb=progress_handler, **kwargs)
+        socketio.emit('creator_status', {
+            'status': 'completed',
+            'post_id': result.get('post_id'),
+            'filename': result.get('filename'),
+            'title': result.get('title'),
+            'format': result.get('format'),
+        })
+    except Exception as e:
+        get_brain().log(f"Reel Creator failed: {e}", style="red")
+        socketio.emit('creator_status', {'status': 'failed', 'error': str(e)})
+
+@app.route('/api/creator/anime', methods=['POST'])
+@login_required
+def creator_anime():
+    """Create a Reel/Post/Story from an anime source fetched off the internet."""
+    data = request.json or {}
+    anime = (data.get("anime") or "").strip() or None  # None → agent picks
+    kwargs = {
+        "source": "anime",
+        "anime": anime,
+        "style": data.get("style", "epic_action"),
+        "fmt": data.get("format", "reel"),
+        "genre": data.get("genre", "auto"),
+        "instruction": data.get("instruction", ""),
+    }
+    threading.Thread(target=_run_creator_job, args=(kwargs,), daemon=True).start()
+    return jsonify({"success": True, "message": "Creating from anime in background."})
+
+@app.route('/api/creator/upload', methods=['POST'])
+@login_required
+def creator_upload():
+    """Receive an uploaded photo OR video for conversion into a Reel/Post/Story."""
+    import time
+    file = request.files.get('media') or request.files.get('video')
+    if not file or not file.filename:
+        return jsonify({"success": False, "error": "No media file provided."}), 400
+
+    ext = Path(file.filename).suffix.lower()
+    from generator.reel_studio import IMAGE_EXTS, VIDEO_EXTS
+    if ext not in IMAGE_EXTS and ext not in VIDEO_EXTS:
+        return jsonify({"success": False, "error": f"Unsupported file type '{ext}'."}), 400
+
+    upload_dir = Path("data/uploads")
+    upload_dir.mkdir(parents=True, exist_ok=True)
+    filepath = upload_dir / f"creator_{int(time.time())}{ext}"
+    file.save(str(filepath))
+    kind = "image" if ext in IMAGE_EXTS else "video"
+    return jsonify({"success": True, "filepath": str(filepath), "kind": kind})
+
+@app.route('/api/creator/compile-upload', methods=['POST'])
+@login_required
+def creator_compile_upload():
+    """Turn an uploaded photo/video into a Reel/Post/Story."""
+    data = request.json or {}
+    filepath_str = (data.get("filepath") or "").strip()
+    if not filepath_str or not Path(filepath_str).exists():
+        return jsonify({"success": False, "error": "Uploaded media not found."}), 400
+    kwargs = {
+        "source": "upload",
+        "media_path": Path(filepath_str),
+        "style": data.get("style", "epic_action"),
+        "fmt": data.get("format", "reel"),
+        "genre": data.get("genre", "auto"),
+        "instruction": data.get("instruction", ""),
+    }
+    threading.Thread(target=_run_creator_job, args=(kwargs,), daemon=True).start()
+    return jsonify({"success": True, "message": "Converting upload in background."})
 
 # Serve generated videos
 @app.route('/videos/<filename>')

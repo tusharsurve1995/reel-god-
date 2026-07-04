@@ -1077,4 +1077,138 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         }
     });
+
+    // ═══════════════════════════════════════════════════════════════
+    //  INSTAGRAM REEL CREATOR
+    // ═══════════════════════════════════════════════════════════════
+    let creatorTab = 'anime';
+    let creatorUploadFilepath = null;
+
+    const pretty = (s) => s.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+    const GENRE_LABEL = {
+        auto: '🎯 Auto (mood match)', bollywood: '🇮🇳 Bollywood', hollywood: '🎞️ Hollywood',
+        pop: '🎤 Pop', instrumental: '🎹 Instrumental', action: '💥 Action',
+        romantic: '💗 Romantic', worldwide: '🌍 Worldwide'
+    };
+
+    function loadCreatorOptions() {
+        fetch('/api/creator/options').then(r => r.json()).then(data => {
+            const animeSel = document.getElementById('creator-anime');
+            (data.animes || []).forEach(a => {
+                const o = document.createElement('option');
+                o.value = a.key; o.textContent = a.label; animeSel.appendChild(o);
+            });
+            const styleSel = document.getElementById('creator-style');
+            (data.styles || []).forEach(s => {
+                const o = document.createElement('option');
+                o.value = s; o.textContent = pretty(s); styleSel.appendChild(o);
+            });
+            const genreSel = document.getElementById('creator-genre');
+            (data.genres || []).forEach(g => {
+                const o = document.createElement('option');
+                o.value = g; o.textContent = GENRE_LABEL[g] || pretty(g); genreSel.appendChild(o);
+            });
+        }).catch(e => logToConsole('Failed to load creator options: ' + e, 'error'));
+    }
+    loadCreatorOptions();
+
+    window.toggleReelCreator = () => {
+        const p = document.getElementById('reel-creator-panel');
+        if (p) p.style.display = (p.style.display === 'none' || !p.style.display) ? 'flex' : 'none';
+    };
+
+    window.switchCreatorTab = (tab) => {
+        creatorTab = tab;
+        const anime = document.getElementById('creator-anime-source');
+        const upload = document.getElementById('creator-upload-source');
+        const tA = document.getElementById('tab-anime');
+        const tU = document.getElementById('tab-upload');
+        if (tab === 'anime') {
+            anime.style.display = 'flex'; upload.style.display = 'none';
+            tA.classList.add('creator-tab-active'); tU.classList.remove('creator-tab-active');
+        } else {
+            anime.style.display = 'none'; upload.style.display = 'flex';
+            tU.classList.add('creator-tab-active'); tA.classList.remove('creator-tab-active');
+        }
+    };
+
+    function uploadCreatorFile(file) {
+        if (!file) return;
+        const label = document.getElementById('creator-upload-label');
+        label.textContent = `Uploading ${file.name}...`;
+        const fd = new FormData();
+        fd.append('media', file);
+        fetch('/api/creator/upload', { method: 'POST', body: fd })
+            .then(r => r.json()).then(data => {
+                if (data.success) {
+                    creatorUploadFilepath = data.filepath;
+                    label.textContent = `✓ ${file.name} (${data.kind}) ready`;
+                    logToConsole(`Uploaded ${data.kind}: ${file.name}`, 'success');
+                } else {
+                    label.textContent = 'Upload failed'; logToConsole('Upload failed: ' + data.error, 'error');
+                }
+            }).catch(e => { label.textContent = 'Upload failed'; logToConsole('Upload error: ' + e, 'error'); });
+    }
+
+    window.handleCreatorFileSelect = (ev) => { uploadCreatorFile(ev.target.files[0]); };
+    window.handleCreatorDrop = (ev) => {
+        ev.preventDefault();
+        if (ev.dataTransfer.files && ev.dataTransfer.files[0]) uploadCreatorFile(ev.dataTransfer.files[0]);
+    };
+
+    window.runCreator = () => {
+        const payload = {
+            style: document.getElementById('creator-style').value,
+            format: document.getElementById('creator-format').value,
+            genre: document.getElementById('creator-genre').value,
+            instruction: document.getElementById('creator-instruction').value,
+        };
+        let url;
+        if (creatorTab === 'anime') {
+            url = '/api/creator/anime';
+            payload.anime = document.getElementById('creator-anime').value;
+        } else {
+            if (!creatorUploadFilepath) { alert('Please upload a photo or video first.'); return; }
+            url = '/api/creator/compile-upload';
+            payload.filepath = creatorUploadFilepath;
+        }
+        const btn = document.getElementById('btn-creator-create');
+        btn.disabled = true; btn.innerHTML = '⏳ Creating...';
+        document.getElementById('creator-progress-container').style.display = 'flex';
+        fetch(url, {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        }).then(r => r.json()).then(data => {
+            if (!data.success) {
+                logToConsole('Creator failed to start: ' + data.error, 'error');
+                btn.disabled = false; btn.innerHTML = '✨ Create';
+            } else {
+                logToConsole('Reel Creator started: ' + data.message, 'system');
+            }
+        }).catch(e => { logToConsole('Creator error: ' + e, 'error'); btn.disabled = false; btn.innerHTML = '✨ Create'; });
+    };
+
+    socket.on('creator_progress', (data) => {
+        const stage = document.getElementById('creator-progress-stage');
+        const pct = document.getElementById('creator-progress-percent');
+        const bar = document.getElementById('creator-progress-bar');
+        if (stage) stage.innerHTML = data.stage;
+        if (pct) pct.innerHTML = `${data.percent}%`;
+        if (bar) bar.style.width = `${data.percent}%`;
+    });
+
+    socket.on('creator_status', (data) => {
+        const btn = document.getElementById('btn-creator-create');
+        if (data.status === 'completed') {
+            logToConsole(`Reel Creator complete: ${data.filename}`, 'success');
+            speak('Your ' + (data.format || 'reel') + ' is ready and added to the archive.');
+            const stage = document.getElementById('creator-progress-stage');
+            if (stage) stage.innerHTML = 'Done! Refreshing...';
+            setTimeout(() => window.location.reload(), 2500);
+        } else if (data.status === 'failed') {
+            logToConsole('Reel Creator failed: ' + data.error, 'error');
+            speak('Creation failed. Please check the logs.');
+            if (btn) { btn.disabled = false; btn.innerHTML = '✨ Create'; }
+        }
+    });
 });
