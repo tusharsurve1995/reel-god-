@@ -39,6 +39,31 @@ INSTAGRAM_ACCOUNT_ID = os.getenv("INSTAGRAM_ACCOUNT_ID", "")
 JAMENDO_CLIENT_ID = os.getenv("JAMENDO_CLIENT_ID", "")
 
 # ─────────────────────────────────────────────
+#  YOUTUBE / yt-dlp DOWNLOAD SETTINGS
+# ─────────────────────────────────────────────
+# YouTube blocks anonymous downloads from datacenter/server IPs ("Sign in to
+# confirm you're not a bot"). To fetch anime clips / music from a server, export
+# your browser cookies and point one of these at them:
+#   - YTDLP_COOKIES_FILE: path to a Netscape-format cookies.txt exported from your browser
+#   - YTDLP_COOKIES_FROM_BROWSER: a browser name yt-dlp can read cookies from (e.g. "chrome", "firefox", "edge")
+# On a normal home PC neither is usually needed.
+YTDLP_COOKIES_FILE = os.getenv("YTDLP_COOKIES_FILE", "")
+YTDLP_COOKIES_FROM_BROWSER = os.getenv("YTDLP_COOKIES_FROM_BROWSER", "")
+
+
+def apply_ytdlp_auth(ydl_opts: dict) -> dict:
+    """Inject optional YouTube auth (cookies) into a yt-dlp options dict.
+
+    Lets anime/music downloads work from servers that YouTube bot-blocks.
+    Safe no-op when neither cookie source is configured.
+    """
+    if YTDLP_COOKIES_FILE and Path(YTDLP_COOKIES_FILE).expanduser().exists():
+        ydl_opts["cookiefile"] = str(Path(YTDLP_COOKIES_FILE).expanduser())
+    elif YTDLP_COOKIES_FROM_BROWSER:
+        ydl_opts["cookiesfrombrowser"] = (YTDLP_COOKIES_FROM_BROWSER,)
+    return ydl_opts
+
+# ─────────────────────────────────────────────
 #  AGENT SETTINGS
 # ─────────────────────────────────────────────
 AGENT_NAME = "REEL GOD"

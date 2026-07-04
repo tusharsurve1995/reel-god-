@@ -204,6 +204,59 @@ MUSIC_BY_MOOD = {
     ],
 }
 
+# ── GENRE-FIRST QUERY POOLS ───────────────────────────────────────────────────
+# Used when the Commander explicitly picks a music genre in the dashboard.
+# {mood} is substituted with the reel's emotional register (e.g. "romantic", "epic").
+MUSIC_BY_GENRE = {
+    "bollywood": [
+        "{mood} Bollywood song instrumental cover",
+        "best {mood} Hindi film music instrumental",
+        "trending Bollywood {mood} background music",
+    ],
+    "hollywood": [
+        "{mood} Hollywood movie soundtrack orchestral",
+        "epic {mood} film score cinematic",
+        "{mood} Hans Zimmer style orchestral music",
+    ],
+    "pop": [
+        "{mood} pop song instrumental no copyright",
+        "trending pop {mood} background music no copyright",
+        "upbeat {mood} pop instrumental viral",
+    ],
+    "instrumental": [
+        "{mood} instrumental music no copyright",
+        "{mood} piano instrumental emotional no copyright",
+        "cinematic {mood} instrumental background no copyright",
+    ],
+    "action": [
+        "{mood} epic action battle music no copyright",
+        "intense {mood} trailer music cinematic",
+        "hype {mood} action background music no copyright",
+    ],
+    "romantic": [
+        "{mood} romantic love song instrumental",
+        "soft {mood} romantic piano music",
+        "beautiful {mood} romantic background music",
+    ],
+    "worldwide": [
+        "{mood} world music no copyright global",
+        "{mood} international cinematic music no copyright",
+        "epic {mood} global soundtrack no copyright",
+    ],
+}
+
+# Map reel styles → a natural-language mood word used to flavour genre queries
+STYLE_TO_MOOD_WORD = {
+    "epic_action":    "epic",
+    "emotional":      "emotional sad",
+    "romance":        "romantic",
+    "dark_cinematic": "dark cinematic",
+    "motivational":   "motivational uplifting",
+    "mystical":       "mystical ethereal",
+    "sacrifice":      "heroic emotional",
+    "happy":          "happy upbeat",
+}
+
 # ── ANIME × STYLE → MUSIC MOOD PRIORITY LIST ──────────────────────────────────
 # Carefully matched: specific Bollywood/Hollywood tracks per anime theme
 ANIME_MUSIC_MAP = {
@@ -327,6 +380,33 @@ class MusicFetcher:
         """Fetch music perfectly matched to a specific anime + style combination."""
         return self.fetch_for_style(style=style, anime=anime)
 
+    def fetch_by_genre(self, genre: str, style: str = "epic_action", anime: str = None) -> Optional[Path]:
+        """Fetch music for an explicitly chosen genre matched to the reel's mood.
+
+        genre ∈ {auto, bollywood, hollywood, pop, instrumental, action, romantic, worldwide}.
+        'auto' (or unknown) falls back to the smart anime/style matcher.
+        """
+        genre = (genre or "auto").strip().lower()
+        if genre in ("", "auto", "any", "smart"):
+            return self.fetch_for_style(style, anime=anime)
+
+        pool = MUSIC_BY_GENRE.get(genre)
+        if not pool:
+            console.print(f"[yellow]Unknown genre '{genre}', using smart match[/]")
+            return self.fetch_for_style(style, anime=anime)
+
+        mood_word = STYLE_TO_MOOD_WORD.get(style, style.replace("_", " "))
+        template = random.choice(pool)
+        query = template.format(mood=mood_word)
+        console.print(f"[bold cyan]Music [{genre} · {style}]:[/] {query}")
+
+        safe_cache = re.sub(r"[^a-z0-9_]", "", f"{genre}_{style}".lower())[:30]
+        result = self._download_audio(query, safe_cache)
+        if result:
+            return result
+        # Fall back to the smart matcher, then SoundHelix
+        return self.fetch_for_style(style, anime=anime)
+
     def fetch_by_mood(self, mood: str, style: str = "epic_action") -> Optional[Path]:
         """Download music by explicit mood name."""
         queries = MUSIC_BY_MOOD.get(mood, list(MUSIC_BY_MOOD.get("emotional_bollywood", [])))
@@ -388,6 +468,8 @@ class MusicFetcher:
                     if local_ffmpeg.exists():
                         ffmpeg_path_obj = local_ffmpeg
                 ydl_opts["ffmpeg_location"] = str(ffmpeg_path_obj.parent)
+
+            config.apply_ytdlp_auth(ydl_opts)
 
             try:
                 console.print(f"[yellow]Attempting music download with format: {fmt[:30]}...[/]")

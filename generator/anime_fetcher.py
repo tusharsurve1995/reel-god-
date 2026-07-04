@@ -246,6 +246,8 @@ class AnimeFetcher:
                         ffmpeg_path_obj = local_ffmpeg
                 ydl_opts["ffmpeg_location"] = str(ffmpeg_path_obj.parent)
 
+            config.apply_ytdlp_auth(ydl_opts)
+
             try:
                 console.print(f"[yellow]Attempting download with format: {fmt[:30]}...[/]")
                 is_url = query.startswith("http://") or query.startswith("https://")

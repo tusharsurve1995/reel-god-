@@ -9,6 +9,8 @@ data/anime_clips/
 data/music_library/
 data/content_archive/**/*.mp4
 data/content_archive/**/*.jpg
+data/content_archive/**/*.json
+data/uploads/
 data/bin/
 data/instagram_session.json
 data/memory.db*

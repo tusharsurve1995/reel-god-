@@ -39,6 +39,12 @@
 | Phase 3: music/audio_mixer.py | Antigravity | 2026-06-28 |
 | Phase 3: music/mood_analyzer.py | Windsurf | 2026-06-28 |
 | Phase 3: music/library_cache.py | Windsurf | 2026-06-28 |
+| Setup + end-to-end verification on Linux VM | Devin | 2026-07-04 |
+| Phase 6: Instagram Reel Creator dashboard panel | Devin | 2026-07-04 |
+| Phase 6: generator/reel_studio.py (anime + upload → reel/post/story) | Devin | 2026-07-04 |
+| Multi-genre music picker (Bollywood/Hollywood/Pop/Instrumental/Action/Romantic/Worldwide) | Devin | 2026-07-04 |
+| Upload photo/video → Post/Story/Reel | Devin | 2026-07-04 |
+| Fix: yt-dlp/imageio-ffmpeg missing from requirements; Co-Pilot posts INSERT | Devin | 2026-07-04 |
 
 ---
 

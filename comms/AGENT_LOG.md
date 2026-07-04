@@ -267,4 +267,35 @@ All requested improvements implemented:
 
 ---
 
+
+
+## Session — 2026-07-04 · Devin (Cascade / Backup #2)
+
+### Task
+Commander asked to turn REEL GOD into a full **Instagram Reel Creator**: remove the header
+"Instagram Link" button, support all music genres, and allow uploading any photo/video to
+convert into a Post/Story/Reel — all high quality.
+
+### Files created
+- `generator/reel_studio.py` — central creator service (anime source OR upload → Reel/Post/Story)
+
+### Files changed
+- `dashboard/templates/index.html` — replaced "Instagram Link" button with "Instagram Reel Creator" panel
+- `dashboard/static/app.js` — creator UI logic + Socket.IO progress listeners
+- `dashboard/static/style.css` — `.creator-select` / `.creator-tab` styling
+- `dashboard/app.py` — `/api/creator/*` endpoints; fixed Co-Pilot's broken posts INSERT
+- `music/music_fetcher.py` — `MUSIC_BY_GENRE` pools + `fetch_by_genre()` + cookie support
+- `generator/anime_fetcher.py` — yt-dlp cookie support
+- `config.py` — `apply_ytdlp_auth()` + `YTDLP_COOKIES_*` settings
+- `requirements.txt` — added `yt-dlp`, `imageio-ffmpeg` (were imported but missing)
+- `.gitignore` — ignore generated sidecar JSON + `data/uploads/`
+
+### Verified
+✅ upload photo → Post (1080x1080, H.264+AAC)
+✅ upload video → Reel (1080x1920, H.264+AAC)
+✅ `/api/creator/options` returns anime/style/format/genre; dashboard renders new button
+⚠️ "From Anime" (YouTube fetch) blocked on datacenter IP — works on home PC or with YT cookies
+
+---
+
 <!-- NEXT AGENT: Append your session below this line -->
