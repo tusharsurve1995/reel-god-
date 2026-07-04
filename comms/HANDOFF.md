@@ -6,7 +6,46 @@
 ## Current Status
 - **Last Active Agent**: Devin (Cascade/Backup #2 role)
 - **Session Date**: 2026-07-04
-- **Reason for Handoff**: Made REEL GOD a cross-platform, installable web app (responsive UI + PWA), added a secure multi-account login, an in-app Settings page for API keys, and deploy config (Render). PR #3 (royalty-free sources) is merged into main.
+- **Reason for Handoff**: Hardening & polish pass on the web app — security (session cookie flags, auto-generated secret key, login rate-limiting, upload size cap, CORS config), robust error handling (JSON 401/404/413/500 + `/healthz`), stronger password/username rules, UI/text polish, and docs. Cross-platform web-app PR #5 is merged into main.
+
+---
+
+## What Was Done — 2026-07-04 (Devin, session 4: hardening & polish)
+
+Branch → PR (see GitHub). Built on top of merged PR #5.
+
+### 🛡️ Security
+- `dashboard/security.py` (NEW) — dependency-free `LoginRateLimiter` (per-IP sliding
+  window + lockout), `ensure_secret_key` (auto-generates & persists a strong random
+  `DASHBOARD_SECRET_KEY` when the insecure placeholder is used), `client_ip` helper.
+- `dashboard/app.py` — hardened session cookies (`HttpOnly`, `SameSite=Lax`,
+  `Secure` via env), `PERMANENT_SESSION_LIFETIME`, `MAX_CONTENT_LENGTH` upload cap,
+  configurable Socket.IO CORS, login route now rate-limited (429 on lockout).
+- `config.py` — new hardening settings (all env-overridable).
+
+### 🧯 Error handling / robustness
+- JSON error handlers for 404/413/500; API `login_required` now returns 401 JSON
+  (not an HTML redirect) so the frontend can detect expired sessions.
+- `/healthz` liveness endpoint (used by `render.yaml`).
+- Safe JSON parsing (`_json_body()` replaces every `request.json or {}`).
+- `save_env_var` now writes to an absolute `.env` path (CWD-independent).
+- Fixed a bare `except:` and an f-string-without-placeholders lint warning.
+
+### 🔐 Auth rules
+- `dashboard/auth.py` — shared `_validate_credentials` (username regex 3–32 chars,
+  password ≥ `MIN_PASSWORD_LENGTH`), applied to create + change-password.
+
+### 🎨 UI / text
+- Login: dynamic error messages (incl. lockout), "show password" toggle.
+- Register: password-requirement hint + `minlength`.
+- Settings: new "Security & Access" info card.
+
+### 📄 Docs
+- `docs/DEPLOYMENT.md` (NEW) — deploy + security guide + full env-var table.
+
+### Verified (local)
+✅ `pyflakes` clean; app imports; `/healthz` ok; API 401/404 JSON; login success →
+   302; 8 failed logins → 429 lockout; settings authed 200.
 
 ---
 

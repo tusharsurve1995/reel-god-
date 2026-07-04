@@ -10,12 +10,14 @@ services:
     # ffmpeg is needed for video rendering; imageio-ffmpeg ships a static binary,
     # so no system package is required on Render.
     startCommand: "gunicorn --worker-class eventlet -w 1 dashboard.app:app --bind 0.0.0.0:$PORT --timeout 600"
-    healthCheckPath: /login
+    healthCheckPath: /healthz
     envVars:
       - key: PYTHON_VERSION
         value: "3.11.9"
       - key: DASHBOARD_SECRET_KEY
         generateValue: true      # random, so sessions are secure
+      - key: SESSION_COOKIE_SECURE
+        value: "1"               # Render serves over HTTPS — HTTPS-only cookies
       # Add your FREE keys in the Render dashboard (Environment tab):
       - key: GEMINI_API_KEY
         sync: false

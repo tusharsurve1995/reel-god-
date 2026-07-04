@@ -9,6 +9,7 @@ Includes custom authentication, voice speaking capabilities, and Instagram direc
 import os
 import sys
 import threading
+from datetime import timedelta
 from pathlib import Path
 from functools import wraps
 from flask import Flask, render_template, jsonify, request, send_from_directory, session, redirect, url_for
@@ -23,15 +24,46 @@ if str(project_root) not in sys.path:
 import config
 from brain.core import ReelGodBrain
 from dashboard import auth
+from dashboard import security
 
 console = Console()
 
+# .env lives next to the project root regardless of the process working dir.
+ENV_PATH = project_root / ".env"
+
 app = Flask(__name__)
-app.config['SECRET_KEY'] = config.DASHBOARD_SECRET_KEY
-socketio = SocketIO(app, cors_allowed_origins="*")
+
+# Session secret: promote the insecure placeholder to a strong, persisted key.
+app.config['SECRET_KEY'] = security.ensure_secret_key(
+    config.DASHBOARD_SECRET_KEY, config.INSECURE_DEFAULT_SECRET_KEY, ENV_PATH
+)
+# Harden session cookies. Secure (HTTPS-only) is opt-in via SESSION_COOKIE_SECURE
+# so local http development still works; enable it in production.
+app.config.update(
+    SESSION_COOKIE_HTTPONLY=True,
+    SESSION_COOKIE_SAMESITE='Lax',
+    SESSION_COOKIE_SECURE=config.SESSION_COOKIE_SECURE,
+    PERMANENT_SESSION_LIFETIME=timedelta(hours=config.SESSION_LIFETIME_HOURS),
+    MAX_CONTENT_LENGTH=config.MAX_UPLOAD_MB * 1024 * 1024,
+)
+
+_cors = config.DASHBOARD_CORS_ORIGINS
+cors_origins = "*" if _cors.strip() == "*" else [o.strip() for o in _cors.split(",") if o.strip()]
+socketio = SocketIO(app, cors_allowed_origins=cors_origins)
+
+# Brute-force guard for the login form.
+login_limiter = security.LoginRateLimiter(
+    config.LOGIN_MAX_ATTEMPTS, config.LOGIN_WINDOW_SECONDS, config.LOGIN_LOCKOUT_SECONDS
+)
 
 # Ensure the accounts table exists and a bootstrap admin is seeded.
 auth.init_db()
+
+
+def _json_body() -> dict:
+    """Safely parse a JSON request body, tolerating a missing/invalid payload."""
+    data = request.get_json(silent=True)
+    return data if isinstance(data, dict) else {}
 
 # Shared brain instance
 brain_instance = None
@@ -57,8 +89,8 @@ def get_brain():
         return brain_instance
 
 def save_env_var(key: str, value: str):
-    """Dynamically save key=value to local .env file."""
-    env_path = Path(".env")
+    """Dynamically save key=value to the project's .env file."""
+    env_path = ENV_PATH
     lines = []
     if env_path.exists():
         with open(env_path, "r") as f:
@@ -85,24 +117,76 @@ def login_required(f):
     @wraps(f)
     def decorated_function(*args, **kwargs):
         if not session.get('logged_in'):
+            # Return JSON (not an HTML redirect) for API calls so the frontend
+            # can detect an expired session cleanly.
+            if request.path.startswith('/api/'):
+                return jsonify({"success": False, "error": "Authentication required."}), 401
             return redirect(url_for('login'))
         return f(*args, **kwargs)
     return decorated_function
+
+# ── ERROR HANDLERS & HEALTH CHECK ─────────────────────────────────────
+# API routes always get JSON errors; everything else falls back to a redirect
+# or a short message so users never see a raw stack trace.
+
+def _wants_json() -> bool:
+    return request.path.startswith('/api/') or 'application/json' in request.headers.get('Accept', '')
+
+
+@app.errorhandler(404)
+def handle_404(err):
+    if _wants_json():
+        return jsonify({"success": False, "error": "Not found."}), 404
+    return render_template('login.html', error=None) if not session.get('logged_in') else (redirect(url_for('index')))
+
+
+@app.errorhandler(413)
+def handle_413(err):
+    limit = config.MAX_UPLOAD_MB
+    return jsonify({"success": False, "error": f"File too large. Max upload size is {limit} MB."}), 413
+
+
+@app.errorhandler(500)
+def handle_500(err):
+    console.print(f"[red]Unhandled server error: {err}[/]")
+    if _wants_json():
+        return jsonify({"success": False, "error": "Internal server error."}), 500
+    return "Something went wrong. Please try again.", 500
+
+
+@app.route('/healthz')
+def healthz():
+    """Liveness probe for hosting platforms (no auth required)."""
+    return jsonify({"status": "ok", "service": config.AGENT_NAME, "version": config.AGENT_VERSION})
 
 # ── ROUTES ────────────────────────────────────────────────────────────
 
 @app.route('/login', methods=['GET', 'POST'])
 def login():
-    error = False
+    error = None
     if request.method == 'POST':
+        ip = security.client_ip(request)
+        locked = login_limiter.retry_after(ip)
+        if locked:
+            mins = max(1, locked // 60)
+            error = f"Too many attempts. Try again in about {mins} minute(s)."
+            return render_template('login.html', error=error), 429
+
         username = (request.form.get('username') or '').strip()
         password = request.form.get('password') or ''
         if auth.verify_user(username, password):
+            login_limiter.register_success(ip)
+            session.permanent = True
             session['logged_in'] = True
             session['username'] = username
             return redirect(url_for('index'))
+
+        lockout = login_limiter.register_failure(ip)
+        if lockout:
+            mins = max(1, lockout // 60)
+            error = f"Too many attempts. Locked for about {mins} minute(s)."
         else:
-            error = True
+            error = "Invalid username or password."
     return render_template('login.html', error=error)
 
 @app.route('/register', methods=['GET', 'POST'])
@@ -178,20 +262,22 @@ def settings():
 @app.route('/api/settings', methods=['POST'])
 @login_required
 def api_settings():
-    data = request.json or {}
+    data = _json_body()
     saved = []
     valid_keys = {k for k, _, _ in SETTINGS_KEYS}
     for key, value in data.items():
         if key in valid_keys and isinstance(value, str) and value.strip():
             _apply_setting(key, value.strip())
             saved.append(key)
+    if not saved:
+        return jsonify({"success": False, "error": "No valid keys provided."}), 400
     return jsonify({"success": True, "saved": saved})
 
 
 @app.route('/api/account/password', methods=['POST'])
 @login_required
 def api_change_password():
-    data = request.json or {}
+    data = _json_body()
     ok, message = auth.change_password(
         session.get('username', ''),
         data.get('current_password', ''),
@@ -203,7 +289,7 @@ def api_change_password():
 @app.route('/api/account/create', methods=['POST'])
 @login_required
 def api_create_account():
-    data = request.json or {}
+    data = _json_body()
     ok, message = auth.create_user(data.get('username', ''), data.get('password', ''))
     return jsonify({"success": ok, "message": message}), (200 if ok else 400)
 
@@ -287,7 +373,7 @@ def approve_idea(idea_id):
 @login_required
 def reject_idea(idea_id):
     brain = get_brain()
-    data = request.json or {}
+    data = _json_body()
     reason = data.get("reason", "No reason provided")
     try:
         brain.memory.reject_idea(idea_id, reason)
@@ -329,7 +415,7 @@ def generate_content(idea_id):
 def manage_rules():
     brain = get_brain()
     if request.method == 'POST':
-        data = request.json or {}
+        data = _json_body()
         rule = data.get("rule")
         category = data.get("category", "general")
         if rule:
@@ -368,7 +454,7 @@ def gemini_live_config():
 @login_required
 def voice_chat():
     brain = get_brain()
-    data = request.json or {}
+    data = _json_body()
     message = data.get("message", "")
     if not message:
         return jsonify({"success": False, "error": "Empty message."}), 400
@@ -396,7 +482,7 @@ def instagram_status():
 @app.route('/api/instagram/save', methods=['POST'])
 @login_required
 def instagram_save():
-    data = request.json or {}
+    data = _json_body()
     username = data.get("username")
     password = data.get("password")
     if not username or not password:
@@ -425,7 +511,7 @@ def instagram_save():
 @app.route('/api/instagram/publish', methods=['POST'])
 @login_required
 def instagram_publish():
-    data = request.json or {}
+    data = _json_body()
     post_id = data.get("post_id")
     if not post_id:
         return jsonify({"success": False, "error": "Post ID required."}), 400
@@ -489,7 +575,7 @@ def _extract_keyframes(video_path: Path, temp_dir: Path) -> list:
     for f in temp_dir.glob("frame_*.jpg"):
         try:
             f.unlink()
-        except:
+        except OSError:
             pass
             
     clip = VideoFileClip(str(video_path))
@@ -550,7 +636,7 @@ def serve_keyframe(filename):
 @login_required
 def copilot_analyze():
     """Call Gemini multimodal vision to analyze the extracted keyframes and user prompt."""
-    data = request.json or {}
+    data = _json_body()
     filepath_str = data.get("filepath", "")
     instruction = data.get("instruction", "make a cinematic hype reel")
     
@@ -625,7 +711,7 @@ Return ONLY valid JSON:
 @login_required
 def copilot_compile():
     """Trigger the editor to compile the user video with recommended music and subtitles."""
-    data = request.json or {}
+    data = _json_body()
     filepath_str = data.get("filepath", "")
     analysis = data.get("analysis", {})
     
@@ -649,7 +735,7 @@ def copilot_compile():
             music_path = music_fx._download_audio(music_query, "copilot")
             socketio.emit('copilot_progress', {'percent': 30, 'stage': 'Music sourced. Synthesizing montage edits...'})
             
-            get_brain().log(f"Co-Pilot: Synthesizing multi-cut edits & narrative overlays...", style="cyan")
+            get_brain().log("Co-Pilot: Synthesizing multi-cut edits & narrative overlays...", style="cyan")
             reel_meta = {
                 "anime": "uploaded_video",
                 "style": "custom",
@@ -731,7 +817,7 @@ def creator_stock():
             "error": "No royalty-free stock source configured. Add a free "
                      "PEXELS_API_KEY or PIXABAY_API_KEY, then restart.",
         }), 400
-    data = request.json or {}
+    data = _json_body()
     kwargs = {
         "source": "stock",
         "style": data.get("style", "epic_action"),
@@ -765,7 +851,7 @@ def _run_creator_job(kwargs: dict):
 @login_required
 def creator_anime():
     """Create a Reel/Post/Story from an anime source fetched off the internet."""
-    data = request.json or {}
+    data = _json_body()
     anime = (data.get("anime") or "").strip() or None  # None → agent picks
     kwargs = {
         "source": "anime",
@@ -803,7 +889,7 @@ def creator_upload():
 @login_required
 def creator_compile_upload():
     """Turn an uploaded photo/video into a Reel/Post/Story."""
-    data = request.json or {}
+    data = _json_body()
     filepath_str = (data.get("filepath") or "").strip()
     if not filepath_str or not Path(filepath_str).exists():
         return jsonify({"success": False, "error": "Uploaded media not found."}), 400
