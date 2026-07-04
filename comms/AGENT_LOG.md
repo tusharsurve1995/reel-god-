@@ -364,3 +364,22 @@ Make REEL GOD usable on mobile + laptop + anywhere from one codebase.
 ✅ Login works with valid creds, rejects wrong password
 ✅ Save API key / change password / add user endpoints behave (success + error paths)
 ⏳ Public deploy pending commander's Render account
+
+---
+
+## Session 4 — Devin — 2026-07-04 (hardening & polish)
+Built on merged PR #5. Full review + implement pass across security, error handling,
+auth rules, UI/text, and docs.
+
+### Files changed
+- NEW: `dashboard/security.py`, `docs/DEPLOYMENT.md`
+- MOD: `dashboard/app.py` (session/cookie hardening, rate-limited login, JSON error
+  handlers + `/healthz`, safe JSON parsing, absolute `.env` path, bare-except fix),
+  `dashboard/auth.py` (username/password validation), `config.py` (security settings),
+  `dashboard/templates/login.html` (dynamic errors + show-password),
+  `dashboard/templates/register.html` (password hint), `dashboard/templates/settings.html`
+  (Security & Access card), `render.yaml` (`/healthz` + `SESSION_COOKIE_SECURE`).
+
+### Verified (local)
+✅ pyflakes clean; app imports; `/healthz` 200; API 401/404 JSON; login 302 on success;
+   8 wrong logins → 429 lockout; settings authed 200.

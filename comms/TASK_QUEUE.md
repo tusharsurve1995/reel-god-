@@ -54,6 +54,11 @@
 | Deploy config: Procfile + render.yaml + gunicorn/eventlet + $PORT | Devin | 2026-07-04 |
 | 🎥 Stock (royalty-free) creator tab + /api/creator/stock endpoint | Devin | 2026-07-04 |
 | docs/CONTENT_SOURCES.md — sources + how-to-verify + agent/app guide | Devin | 2026-07-04 |
+| Security hardening: session cookie flags + auto secret key + login rate-limiting + upload cap + CORS config | Devin | 2026-07-04 |
+| Robust error handling: JSON 401/404/413/500 handlers + /healthz + safe JSON parsing | Devin | 2026-07-04 |
+| Stronger auth: username regex + configurable min password length | Devin | 2026-07-04 |
+| UI/text polish: dynamic login errors, show-password, register hint, settings security card | Devin | 2026-07-04 |
+| docs/DEPLOYMENT.md — deploy + security guide + env-var table | Devin | 2026-07-04 |
 
 ---
 

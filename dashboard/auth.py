@@ -11,13 +11,26 @@ from a phone, laptop, or any device and reach the same content.
 """
 
 import os
+import re
 import sqlite3
-from pathlib import Path
-from typing import Optional
 
 from werkzeug.security import generate_password_hash, check_password_hash
 
 import config
+
+# Usernames: letters, numbers, dot, underscore, hyphen; 3–32 chars.
+_USERNAME_RE = re.compile(r"^[A-Za-z0-9._-]{3,32}$")
+
+
+def _validate_credentials(username: str, password: str) -> tuple[bool, str]:
+    """Shared validation for account creation / password changes."""
+    if not _USERNAME_RE.match(username):
+        return False, (
+            "Username must be 3–32 characters (letters, numbers, . _ - only)."
+        )
+    if len(password or "") < config.MIN_PASSWORD_LENGTH:
+        return False, f"Password must be at least {config.MIN_PASSWORD_LENGTH} characters."
+    return True, ""
 
 
 def _connect() -> sqlite3.Connection:
@@ -77,10 +90,9 @@ def verify_user(username: str, password: str) -> bool:
 def create_user(username: str, password: str) -> tuple[bool, str]:
     """Create a new login. Returns (ok, message)."""
     username = (username or "").strip()
-    if len(username) < 3:
-        return False, "Username must be at least 3 characters."
-    if len(password or "") < 4:
-        return False, "Password must be at least 4 characters."
+    ok, message = _validate_credentials(username, password)
+    if not ok:
+        return False, message
     try:
         with _connect() as conn:
             conn.execute(
@@ -97,8 +109,8 @@ def change_password(username: str, current_password: str, new_password: str) -> 
     """Change a user's password after verifying the current one."""
     if not verify_user(username, current_password):
         return False, "Current password is incorrect."
-    if len(new_password or "") < 4:
-        return False, "New password must be at least 4 characters."
+    if len(new_password or "") < config.MIN_PASSWORD_LENGTH:
+        return False, f"New password must be at least {config.MIN_PASSWORD_LENGTH} characters."
     with _connect() as conn:
         conn.execute(
             "UPDATE users SET password_hash = ? WHERE username = ?",

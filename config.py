@@ -168,8 +168,43 @@ DASHBOARD_HOST = "0.0.0.0"
 # Hosting platforms inject the port to bind via $PORT; falls back to 5000 locally.
 DASHBOARD_PORT = int(os.getenv("PORT", "5000"))
 # Set DASHBOARD_SECRET_KEY in the environment for a secure, stable session secret
-# when deployed publicly (Render can auto-generate one).
-DASHBOARD_SECRET_KEY = os.getenv("DASHBOARD_SECRET_KEY", "reel-god-secret-key-change-this")
+# when deployed publicly (Render can auto-generate one). This placeholder default
+# is treated as "insecure" — the app auto-generates and persists a strong random
+# key on first run if this value is left unchanged (see dashboard/app.py).
+INSECURE_DEFAULT_SECRET_KEY = "reel-god-secret-key-change-this"
+DASHBOARD_SECRET_KEY = os.getenv("DASHBOARD_SECRET_KEY", INSECURE_DEFAULT_SECRET_KEY)
+
+
+def _as_bool(value: str, default: bool = False) -> bool:
+    """Parse a truthy/falsy environment string."""
+    if value is None or value == "":
+        return default
+    return value.strip().lower() in ("1", "true", "yes", "on")
+
+
+# ─────────────────────────────────────────────
+#  SECURITY / HARDENING
+# ─────────────────────────────────────────────
+# Session cookies are always HttpOnly + SameSite=Lax. Enable Secure (HTTPS-only
+# cookies) in production by setting SESSION_COOKIE_SECURE=1 — required when the
+# app is served over HTTPS (Render, a tunnel, etc.).
+SESSION_COOKIE_SECURE = _as_bool(os.getenv("SESSION_COOKIE_SECURE", ""), default=False)
+# How long a login session stays valid (hours).
+SESSION_LIFETIME_HOURS = int(os.getenv("SESSION_LIFETIME_HOURS", "168"))  # 7 days
+
+# Max upload size (MB) for photo/video uploads — blocks oversized/abusive uploads.
+MAX_UPLOAD_MB = int(os.getenv("MAX_UPLOAD_MB", "200"))
+
+# Allowed origins for the Socket.IO / CORS layer. Comma-separated, or "*" for any.
+DASHBOARD_CORS_ORIGINS = os.getenv("DASHBOARD_CORS_ORIGINS", "*")
+
+# Brute-force protection for the login form (per client IP).
+LOGIN_MAX_ATTEMPTS = int(os.getenv("LOGIN_MAX_ATTEMPTS", "8"))
+LOGIN_WINDOW_SECONDS = int(os.getenv("LOGIN_WINDOW_SECONDS", "300"))    # 5 min window
+LOGIN_LOCKOUT_SECONDS = int(os.getenv("LOGIN_LOCKOUT_SECONDS", "300"))  # 5 min lockout
+
+# Minimum password length for new accounts / password changes.
+MIN_PASSWORD_LENGTH = int(os.getenv("MIN_PASSWORD_LENGTH", "6"))
 
 # ─────────────────────────────────────────────
 #  VALIDATION

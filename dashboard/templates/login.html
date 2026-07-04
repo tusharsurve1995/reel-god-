@@ -103,7 +103,7 @@
         <div class="login-logo">🤖 REEL GOD</div>
         <div class="login-subtitle">COMMANDER ACCESS PORTAL</div>
         
-        <form method="POST" action="/login">
+        <form method="POST" action="/login" autocomplete="on">
             <div class="form-group">
                 <label class="form-label" for="username">Username</label>
                 <input class="form-input" type="text" id="username" name="username" placeholder="Enter username..." required autocomplete="username" autofocus>
@@ -111,8 +111,11 @@
             <div class="form-group">
                 <label class="form-label" for="password">Password</label>
                 <input class="form-input" type="password" id="password" name="password" placeholder="Enter password..." required autocomplete="current-password">
+                <label style="display:flex; align-items:center; gap:0.4rem; margin-top:0.5rem; font-size:0.75rem; color:var(--text-secondary); text-transform:none; letter-spacing:0;">
+                    <input type="checkbox" id="show-pass" onclick="document.getElementById('password').type = this.checked ? 'text' : 'password'"> Show password
+                </label>
             </div>
-            
+
             <button class="btn btn-approve btn-login" type="submit">
                 ⚡ Authenticate
             </button>
@@ -121,10 +124,10 @@
         <div style="margin-top: 1.25rem; font-size: 0.85rem; color: var(--text-secondary);">
             Need an account? <a href="/register" style="color: var(--accent-cyan); text-decoration: none;">Create one</a>
         </div>
-        
+
         {% if error %}
-        <div class="error-message">
-            ❌ Invalid username or password.
+        <div class="error-message" role="alert">
+            ❌ {{ error }}
         </div>
         {% endif %}
     </div>

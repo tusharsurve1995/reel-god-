@@ -94,6 +94,18 @@
                 <div class="toast" id="user-toast"></div>
             </div>
         </div>
+
+        <!-- SECURITY & DEPLOY -->
+        <div class="glass-panel">
+            <h2 class="section-title">🛡️ Security &amp; Access</h2>
+            <ul style="font-size: 0.85rem; color: var(--text-secondary); line-height: 1.7; margin: 0; padding-left: 1.2rem;">
+                <li>Passwords are stored <b>hashed</b> — never in plain text.</li>
+                <li>Repeated wrong logins are temporarily <b>rate-limited</b> to block brute-force.</li>
+                <li>When you host this publicly (e.g. Render), set <code>SESSION_COOKIE_SECURE=1</code> and a
+                    strong <code>DASHBOARD_SECRET_KEY</code>. A random key is auto-generated on first run if you don't.</li>
+                <li>Change the default <b>admin / admin</b> password above right away.</li>
+            </ul>
+        </div>
     </div>
 
     <script>
