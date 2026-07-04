@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title>REEL GOD — Create Account</title>
+    <link rel="stylesheet" href="/static/style.css">
+    <link rel="manifest" href="/manifest.webmanifest">
+    <meta name="theme-color" content="#0b0c16">
+    <link rel="apple-touch-icon" href="/static/icons/apple-touch-icon.png">
+    <link rel="icon" type="image/png" sizes="32x32" href="/static/icons/favicon-32.png">
+    <style>
+        body { display: flex; justify-content: center; align-items: center; min-height: 100vh; padding: 1rem; }
+        .login-box { width: 100%; max-width: 420px; text-align: center; position: relative; overflow: hidden; }
+        .login-box::before { content: ''; position: absolute; top: 0; left: 0; width: 100%; height: 4px; background: linear-gradient(90deg, var(--accent-cyan), var(--accent-purple)); }
+        .login-logo { font-size: 2rem; font-weight: 800; letter-spacing: 3px; margin-bottom: 0.5rem; background: linear-gradient(90deg, var(--accent-cyan), var(--accent-purple)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+        .login-subtitle { color: var(--text-secondary); font-size: 0.9rem; margin-bottom: 2rem; }
+        .form-group { margin-bottom: 1.5rem; text-align: left; }
+        .form-label { display: block; font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 0.5rem; text-transform: uppercase; letter-spacing: 1px; font-weight: 600; }
+        .form-input { width: 100%; background: rgba(255, 255, 255, 0.03); border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 8px; padding: 0.75rem 1rem; color: white; font-family: inherit; font-size: 1rem; }
+        .form-input:focus { outline: none; border-color: var(--accent-cyan); box-shadow: 0 0 10px rgba(0, 240, 255, 0.15); }
+        .btn-login { width: 100%; padding: 0.75rem; font-size: 1rem; justify-content: center; margin-top: 1rem; }
+    </style>
+</head>
+<body>
+    <div class="glass-panel login-box">
+        <div class="login-logo">🤖 REEL GOD</div>
+        <div class="login-subtitle">
+            {% if open_signup %}CREATE THE FIRST ADMIN ACCOUNT{% else %}ADD A NEW LOGIN{% endif %}
+        </div>
+
+        <form method="POST" action="/register">
+            <div class="form-group">
+                <label class="form-label" for="username">Username</label>
+                <input class="form-input" type="text" id="username" name="username" placeholder="Choose a username..." required autocomplete="username" autofocus>
+            </div>
+            <div class="form-group">
+                <label class="form-label" for="password">Password</label>
+                <input class="form-input" type="password" id="password" name="password" placeholder="Choose a strong password..." required autocomplete="new-password">
+            </div>
+
+            <button class="btn btn-approve btn-login" type="submit">
+                ⚡ Create Account
+            </button>
+        </form>
+
+        {% if message %}
+        <div style="margin-top: 1rem; font-size: 0.85rem; font-weight: 500; color: {% if ok %}var(--accent-green){% else %}var(--accent-red){% endif %};">
+            {{ '✅' if ok else '❌' }} {{ message }}
+        </div>
+        {% endif %}
+
+        <div style="margin-top: 1.25rem; font-size: 0.85rem; color: var(--text-secondary);">
+            {% if open_signup %}
+            Already set up? <a href="/login" style="color: var(--accent-cyan); text-decoration: none;">Log in</a>
+            {% else %}
+            <a href="/" style="color: var(--accent-cyan); text-decoration: none;">← Back to dashboard</a>
+            {% endif %}
+        </div>
+    </div>
+</body>
+</html>

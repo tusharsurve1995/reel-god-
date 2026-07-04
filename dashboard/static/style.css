@@ -560,11 +560,28 @@ video {
   .reels-grid {
     grid-template-columns: 1fr;
   }
+  /* Creator "Format / Style / Music" row stacks on phones */
+  .creator-grid-3 {
+    grid-template-columns: 1fr !important;
+  }
+  .copilot-keyframes-grid {
+    grid-template-columns: repeat(2, 1fr) !important;
+  }
+  /* Source tabs stack full-width so labels stay readable */
+  #reel-creator-panel .creator-tab {
+    flex: 1 1 100% !important;
+  }
 }
 
 @media (max-width: 480px) {
   .stats-grid {
     grid-template-columns: 1fr;
+  }
+  h1 {
+    font-size: 1.5rem;
+  }
+  .glass-panel {
+    padding: 1rem !important;
   }
 }
 

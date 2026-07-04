@@ -2,12 +2,28 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <title>REEL GOD — Commander Dashboard</title>
     <link rel="stylesheet" href="/static/style.css">
+    <!-- PWA: installable on phone & laptop -->
+    <link rel="manifest" href="/manifest.webmanifest">
+    <meta name="theme-color" content="#0b0c16">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="REEL GOD">
+    <link rel="apple-touch-icon" href="/static/icons/apple-touch-icon.png">
+    <link rel="icon" type="image/png" sizes="32x32" href="/static/icons/favicon-32.png">
     <!-- Socket.IO library -->
     <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
-    <script src="/static/app.js?v=1.0.2"></script>
+    <script src="/static/app.js?v=1.1.0"></script>
+    <script>
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', function () {
+                navigator.serviceWorker.register('/sw.js', { scope: '/' }).catch(function () {});
+            });
+        }
+    </script>
 </head>
 <body>
     <div class="dashboard-container">
@@ -26,6 +42,7 @@
                 <button class="btn btn-generate" onclick="toggleReelCreator()" style="padding: 0.4rem 1.1rem; background: linear-gradient(135deg, #00f0ff, #7000ff); border: none; font-weight: 700;">
                     🎬 Instagram Reel Creator
                 </button>
+                <a href="/settings" class="btn" style="text-decoration: none; padding: 0.4rem 1rem;">⚙️ Settings</a>
                 <a href="/logout" class="btn btn-reject" style="text-decoration: none; padding: 0.4rem 1rem;">🔓 Logout</a>
             </div>
         </header>
@@ -74,7 +91,7 @@
             </div>
 
             <!-- FORMAT + STYLE + MUSIC -->
-            <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem;">
+            <div class="creator-grid-3" style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem;">
                 <div style="display: flex; flex-direction: column; gap: 0.4rem;">
                     <label class="stat-title" style="font-size: 0.75rem;">Format</label>
                     <select id="creator-format" class="creator-select">
@@ -282,7 +299,7 @@
                             <button class="btn btn-reject" onclick="resetCopilot()" style="padding: 0.2rem 0.6rem; font-size: 0.75rem; border-radius: 4px;">Clear</button>
                         </div>
                         
-                        <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 0.5rem;" id="copilot-keyframes-grid">
+                        <div class="copilot-keyframes-grid" style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 0.5rem;" id="copilot-keyframes-grid">
                             <!-- Dynamically populated -->
                         </div>
 

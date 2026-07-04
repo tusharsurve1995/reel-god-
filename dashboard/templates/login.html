@@ -2,9 +2,14 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <title>REEL GOD — Authentication Required</title>
     <link rel="stylesheet" href="/static/style.css">
+    <link rel="manifest" href="/manifest.webmanifest">
+    <meta name="theme-color" content="#0b0c16">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <link rel="apple-touch-icon" href="/static/icons/apple-touch-icon.png">
+    <link rel="icon" type="image/png" sizes="32x32" href="/static/icons/favicon-32.png">
     <style>
         body {
             display: flex;
@@ -100,18 +105,26 @@
         
         <form method="POST" action="/login">
             <div class="form-group">
-                <label class="form-label" for="password">Commander Password</label>
-                <input class="form-input" type="password" id="password" name="password" placeholder="Enter secure key..." required autocomplete="current-password" autofocus>
+                <label class="form-label" for="username">Username</label>
+                <input class="form-input" type="text" id="username" name="username" placeholder="Enter username..." required autocomplete="username" autofocus>
+            </div>
+            <div class="form-group">
+                <label class="form-label" for="password">Password</label>
+                <input class="form-input" type="password" id="password" name="password" placeholder="Enter password..." required autocomplete="current-password">
             </div>
             
             <button class="btn btn-approve btn-login" type="submit">
                 ⚡ Authenticate
             </button>
         </form>
+
+        <div style="margin-top: 1.25rem; font-size: 0.85rem; color: var(--text-secondary);">
+            Need an account? <a href="/register" style="color: var(--accent-cyan); text-decoration: none;">Create one</a>
+        </div>
         
         {% if error %}
         <div class="error-message">
-            ❌ Invalid authentication credentials.
+            ❌ Invalid username or password.
         </div>
         {% endif %}
     </div>

@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title>REEL GOD — Settings</title>
+    <link rel="stylesheet" href="/static/style.css">
+    <link rel="manifest" href="/manifest.webmanifest">
+    <meta name="theme-color" content="#0b0c16">
+    <link rel="apple-touch-icon" href="/static/icons/apple-touch-icon.png">
+    <link rel="icon" type="image/png" sizes="32x32" href="/static/icons/favicon-32.png">
+    <style>
+        .settings-field { margin-bottom: 1.1rem; }
+        .settings-field label { display: block; font-size: 0.8rem; color: var(--text-secondary); margin-bottom: 0.35rem; font-weight: 600; }
+        .settings-input { width: 100%; background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08); border-radius: 8px; padding: 0.6rem 1rem; color: white; font-family: inherit; font-size: 0.95rem; }
+        .settings-input:focus { outline: none; border-color: var(--accent-cyan); }
+        .pill { font-size: 0.7rem; padding: 0.15rem 0.55rem; border-radius: 999px; margin-left: 0.5rem; vertical-align: middle; }
+        .pill-on { background: rgba(57,255,20,0.15); color: #9bff8c; border: 1px solid var(--accent-green); }
+        .pill-off { background: rgba(255,255,255,0.05); color: var(--text-secondary); border: 1px solid rgba(255,255,255,0.1); }
+        .toast { margin-top: 0.75rem; font-size: 0.85rem; font-weight: 500; }
+        a.key-link { color: var(--accent-cyan); text-decoration: none; font-size: 0.75rem; }
+        .settings-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 2rem; }
+        @media (max-width: 900px) { .settings-grid { grid-template-columns: 1fr; } }
+    </style>
+</head>
+<body>
+    <div class="dashboard-container">
+        <header class="glass-panel">
+            <div class="logo-section">
+                <h1>⚙️ Settings</h1>
+                <p>Signed in as <b>{{ username }}</b></p>
+            </div>
+            <div class="header-right" style="display: flex; align-items: center; gap: 1rem;">
+                <a href="/" class="btn" style="text-decoration: none; padding: 0.4rem 1rem;">← Dashboard</a>
+                <a href="/logout" class="btn btn-reject" style="text-decoration: none; padding: 0.4rem 1rem;">🔓 Logout</a>
+            </div>
+        </header>
+
+        <!-- API KEYS -->
+        <div class="glass-panel">
+            <h2 class="section-title">🔑 API Keys</h2>
+            <p style="font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 1.25rem;">
+                All keys are <b>free</b>. Add them here to unlock features — leave blank to keep a feature off.
+                Saved instantly (no restart needed).
+            </p>
+            {% for k in key_status %}
+            <div class="settings-field">
+                <label for="in-{{ k.key }}">
+                    {{ k.label }}
+                    {% if k.configured %}<span class="pill pill-on">configured{% if k.masked %} · {{ k.masked }}{% endif %}</span>
+                    {% else %}<span class="pill pill-off">not set</span>{% endif %}
+                    — <a class="key-link" href="{{ k.url }}" target="_blank" rel="noopener">get a free key ↗</a>
+                </label>
+                <input class="settings-input" type="password" id="in-{{ k.key }}" data-key="{{ k.key }}"
+                       placeholder="{% if k.configured %}Enter a new value to replace it…{% else %}Paste your {{ k.key }}…{% endif %}">
+            </div>
+            {% endfor %}
+            <button class="btn btn-approve" onclick="saveKeys()" style="padding: 0.6rem 1.5rem;">💾 Save API Keys</button>
+            <div class="toast" id="keys-toast"></div>
+        </div>
+
+        <div class="settings-grid">
+            <!-- CHANGE PASSWORD -->
+            <div class="glass-panel">
+                <h2 class="section-title">🔒 Change Your Password</h2>
+                <div class="settings-field">
+                    <label for="cur-pass">Current password</label>
+                    <input class="settings-input" type="password" id="cur-pass" autocomplete="current-password">
+                </div>
+                <div class="settings-field">
+                    <label for="new-pass">New password</label>
+                    <input class="settings-input" type="password" id="new-pass" autocomplete="new-password">
+                </div>
+                <button class="btn btn-approve" onclick="changePassword()" style="padding: 0.6rem 1.5rem;">Update Password</button>
+                <div class="toast" id="pass-toast"></div>
+            </div>
+
+            <!-- ADD LOGIN -->
+            <div class="glass-panel">
+                <h2 class="section-title">👥 Add Another Login</h2>
+                <p style="font-size: 0.8rem; color: var(--text-secondary); margin-bottom: 1rem;">
+                    Extra logins share the same workspace (same posts, ideas &amp; schedule).
+                    Current logins: <b>{{ usernames | join(', ') }}</b>
+                </p>
+                <div class="settings-field">
+                    <label for="nu-name">New username</label>
+                    <input class="settings-input" type="text" id="nu-name" autocomplete="off">
+                </div>
+                <div class="settings-field">
+                    <label for="nu-pass">New password</label>
+                    <input class="settings-input" type="password" id="nu-pass" autocomplete="new-password">
+                </div>
+                <button class="btn btn-approve" onclick="addUser()" style="padding: 0.6rem 1.5rem;">Create Login</button>
+                <div class="toast" id="user-toast"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function showToast(id, ok, msg) {
+            const el = document.getElementById(id);
+            el.style.color = ok ? 'var(--accent-green)' : 'var(--accent-red)';
+            el.textContent = (ok ? '✅ ' : '❌ ') + msg;
+        }
+        async function postJSON(url, body) {
+            const r = await fetch(url, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(body),
+            });
+            return { ok: r.ok, data: await r.json().catch(() => ({})) };
+        }
+        async function saveKeys() {
+            const payload = {};
+            document.querySelectorAll('input[data-key]').forEach(inp => {
+                if (inp.value.trim()) payload[inp.dataset.key] = inp.value.trim();
+            });
+            if (!Object.keys(payload).length) { showToast('keys-toast', false, 'Nothing to save — enter at least one key.'); return; }
+            const { ok, data } = await postJSON('/api/settings', payload);
+            if (ok && data.success) { showToast('keys-toast', true, 'Saved: ' + (data.saved || []).join(', ') + '. Reloading…'); setTimeout(() => location.reload(), 900); }
+            else showToast('keys-toast', false, (data.error || 'Could not save.'));
+        }
+        async function changePassword() {
+            const { ok, data } = await postJSON('/api/account/password', {
+                current_password: document.getElementById('cur-pass').value,
+                new_password: document.getElementById('new-pass').value,
+            });
+            showToast('pass-toast', ok && data.success, data.message || (ok ? 'Updated.' : 'Failed.'));
+            if (ok && data.success) { document.getElementById('cur-pass').value=''; document.getElementById('new-pass').value=''; }
+        }
+        async function addUser() {
+            const { ok, data } = await postJSON('/api/account/create', {
+                username: document.getElementById('nu-name').value,
+                password: document.getElementById('nu-pass').value,
+            });
+            showToast('user-toast', ok && data.success, data.message || (ok ? 'Created.' : 'Failed.'));
+            if (ok && data.success) setTimeout(() => location.reload(), 900);
+        }
+    </script>
+</body>
+</html>

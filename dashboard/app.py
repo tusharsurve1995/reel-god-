@@ -22,6 +22,7 @@ if str(project_root) not in sys.path:
 
 import config
 from brain.core import ReelGodBrain
+from dashboard import auth
 
 console = Console()
 
@@ -29,8 +30,8 @@ app = Flask(__name__)
 app.config['SECRET_KEY'] = config.DASHBOARD_SECRET_KEY
 socketio = SocketIO(app, cors_allowed_origins="*")
 
-# Load password from environment
-COMMANDER_PASSWORD = os.environ.get("COMMANDER_PASSWORD", "admin")
+# Ensure the accounts table exists and a bootstrap admin is seeded.
+auth.init_db()
 
 # Shared brain instance
 brain_instance = None
@@ -94,18 +95,133 @@ def login_required(f):
 def login():
     error = False
     if request.method == 'POST':
-        password = request.form.get('password')
-        if password == COMMANDER_PASSWORD:
+        username = (request.form.get('username') or '').strip()
+        password = request.form.get('password') or ''
+        if auth.verify_user(username, password):
             session['logged_in'] = True
+            session['username'] = username
             return redirect(url_for('index'))
         else:
             error = True
     return render_template('login.html', error=error)
 
+@app.route('/register', methods=['GET', 'POST'])
+def register():
+    """Create a login. Open when there are no accounts yet (first-run setup);
+    afterwards only a logged-in user can add more accounts (shared workspace)."""
+    open_signup = auth.user_count() == 0
+    if not open_signup and not session.get('logged_in'):
+        return redirect(url_for('login'))
+
+    message, ok = None, False
+    if request.method == 'POST':
+        username = request.form.get('username') or ''
+        password = request.form.get('password') or ''
+        ok, message = auth.create_user(username, password)
+        if ok and open_signup:
+            # First account created — log them straight in.
+            session['logged_in'] = True
+            session['username'] = username.strip()
+            return redirect(url_for('index'))
+    return render_template('register.html', open_signup=open_signup,
+                           message=message, ok=ok)
+
 @app.route('/logout')
 def logout():
     session.pop('logged_in', None)
+    session.pop('username', None)
     return redirect(url_for('login'))
+
+# ── SETTINGS (API KEYS + ACCOUNTS) ─────────────────────────────────────
+# User-editable API keys. Each is free; leaving one blank simply disables that
+# feature (the app degrades gracefully).
+SETTINGS_KEYS = [
+    ("GEMINI_API_KEY", "Gemini (AI scripts & captions)", "https://aistudio.google.com/apikey"),
+    ("PEXELS_API_KEY", "Pexels (royalty-free video/photos)", "https://www.pexels.com/api/"),
+    ("PIXABAY_API_KEY", "Pixabay (royalty-free video/photos)", "https://pixabay.com/api/docs/"),
+    ("JAMENDO_CLIENT_ID", "Jamendo (Creative-Commons music)", "https://devportal.jamendo.com"),
+]
+
+
+def _apply_setting(key: str, value: str) -> None:
+    """Persist a key to .env, the live environment, and the config module so it
+    takes effect immediately without a restart."""
+    save_env_var(key, value)
+    os.environ[key] = value
+    if hasattr(config, key):
+        setattr(config, key, value)
+
+
+@app.route('/settings')
+@login_required
+def settings():
+    key_status = []
+    for key, label, url in SETTINGS_KEYS:
+        current = os.environ.get(key) or getattr(config, key, "") or ""
+        if current == "PASTE_YOUR_KEY_HERE":
+            current = ""
+        key_status.append({
+            "key": key,
+            "label": label,
+            "url": url,
+            "configured": bool(current),
+            "masked": (current[:4] + "…" + current[-2:]) if len(current) > 8 else ("set" if current else ""),
+        })
+    return render_template(
+        'settings.html',
+        key_status=key_status,
+        username=session.get('username', 'admin'),
+        usernames=auth.list_usernames(),
+    )
+
+
+@app.route('/api/settings', methods=['POST'])
+@login_required
+def api_settings():
+    data = request.json or {}
+    saved = []
+    valid_keys = {k for k, _, _ in SETTINGS_KEYS}
+    for key, value in data.items():
+        if key in valid_keys and isinstance(value, str) and value.strip():
+            _apply_setting(key, value.strip())
+            saved.append(key)
+    return jsonify({"success": True, "saved": saved})
+
+
+@app.route('/api/account/password', methods=['POST'])
+@login_required
+def api_change_password():
+    data = request.json or {}
+    ok, message = auth.change_password(
+        session.get('username', ''),
+        data.get('current_password', ''),
+        data.get('new_password', ''),
+    )
+    return jsonify({"success": ok, "message": message}), (200 if ok else 400)
+
+
+@app.route('/api/account/create', methods=['POST'])
+@login_required
+def api_create_account():
+    data = request.json or {}
+    ok, message = auth.create_user(data.get('username', ''), data.get('password', ''))
+    return jsonify({"success": ok, "message": message}), (200 if ok else 400)
+
+# ── PWA (installable web app) ──────────────────────────────────────────
+
+@app.route('/manifest.webmanifest')
+def manifest():
+    return send_from_directory(app.static_folder, 'manifest.webmanifest',
+                               mimetype='application/manifest+json')
+
+
+@app.route('/sw.js')
+def service_worker():
+    # Served from root so its scope covers the whole app.
+    resp = send_from_directory(app.static_folder, 'sw.js', mimetype='application/javascript')
+    resp.headers['Service-Worker-Allowed'] = '/'
+    resp.headers['Cache-Control'] = 'no-cache'
+    return resp
 
 @app.route('/')
 @login_required
@@ -741,23 +857,25 @@ def get_local_ip():
 def start_dashboard():
     """Start Flask + Socket.IO server."""
     get_brain()
-    
+
+    # Hosting platforms (Render/Railway/etc.) inject the port to bind via $PORT.
+    port = int(os.environ.get("PORT", config.DASHBOARD_PORT))
     local_ip = get_local_ip()
     from rich.panel import Panel
-    
+
     console.print(Panel(
         f"[bold green]✓ Dashboard Server Active & Network-Accessible[/bold green]\n\n"
-        f"🖥️  [bold]On your PC:[/]       [cyan]http://127.0.0.1:{config.DASHBOARD_PORT}[/cyan]\n"
-        f"📱 [bold]On your Mobile:[/]   [cyan]http://{local_ip}:{config.DASHBOARD_PORT}[/cyan]\n\n"
+        f"🖥️  [bold]On your PC:[/]       [cyan]http://127.0.0.1:{port}[/cyan]\n"
+        f"📱 [bold]On your Mobile:[/]   [cyan]http://{local_ip}:{port}[/cyan]\n\n"
         f"[dim]Note: Ensure both your PC and Mobile are on the same Wi-Fi network![/dim]",
         title="🚀 REEL GOD COMMAND DASHBOARD",
         border_style="green"
     ))
-    
+
     socketio.run(
         app,
         host=config.DASHBOARD_HOST,
-        port=config.DASHBOARD_PORT,
+        port=port,
         debug=False,
         use_reloader=False,
         allow_unsafe_werkzeug=True

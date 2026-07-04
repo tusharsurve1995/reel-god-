@@ -1,0 +1,32 @@
+# One-click deploy config for Render (https://render.com) — free tier works.
+# In the Render dashboard: New + → "Blueprint" → point it at this repo.
+# After the first deploy, open the service URL, and create your admin account.
+services:
+  - type: web
+    name: reel-god
+    runtime: python
+    plan: free
+    buildCommand: "pip install -r requirements.txt"
+    # ffmpeg is needed for video rendering; imageio-ffmpeg ships a static binary,
+    # so no system package is required on Render.
+    startCommand: "gunicorn --worker-class eventlet -w 1 dashboard.app:app --bind 0.0.0.0:$PORT --timeout 600"
+    healthCheckPath: /login
+    envVars:
+      - key: PYTHON_VERSION
+        value: "3.11.9"
+      - key: DASHBOARD_SECRET_KEY
+        generateValue: true      # random, so sessions are secure
+      # Add your FREE keys in the Render dashboard (Environment tab):
+      - key: GEMINI_API_KEY
+        sync: false
+      - key: PEXELS_API_KEY
+        sync: false
+      - key: PIXABAY_API_KEY
+        sync: false
+      - key: JAMENDO_CLIENT_ID
+        sync: false
+      # Optional bootstrap admin (you can also just use the first-run signup page):
+      - key: COMMANDER_USERNAME
+        sync: false
+      - key: COMMANDER_PASSWORD
+        sync: false
