@@ -1,0 +1,31 @@
+# Environments
+.venv/
+venv/
+ENV/
+.env
+
+# Raw footage, music, and generated videos (avoid huge binaries in git history)
+data/anime_clips/
+data/music_library/
+data/content_archive/**/*.mp4
+data/content_archive/**/*.jpg
+data/bin/
+data/instagram_session.json
+data/memory.db*
+temp_media/
+*.mp4
+*.mp3
+*.jpg
+*.png
+*.webp
+*.log
+
+
+# Pycache and bytecode
+__pycache__/
+*.pyc
+
+# Local IDEs
+.idea/
+.vscode/
+.DS_Store

@@ -1,0 +1,340 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>REEL GOD — Commander Dashboard</title>
+    <link rel="stylesheet" href="/static/style.css">
+    <!-- Socket.IO library -->
+    <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
+    <script src="/static/app.js?v=1.0.2"></script>
+</head>
+<body>
+    <div class="dashboard-container">
+        <!-- HEADER -->
+        <header class="glass-panel">
+            <div class="logo-section">
+                <h1>🤖 REEL GOD</h1>
+                <p>Autonomous Anime Instagram Agent · Beast Level</p>
+            </div>
+            <div class="header-right" style="display: flex; align-items: center; gap: 1.5rem;">
+                <div class="status-badge">
+                    <div class="pulse-dot"></div>
+                    <span>Agent Online (24/7 Mode)</span>
+                </div>
+                <!-- Instagram Config Button -->
+                <button class="btn btn-approve" onclick="toggleInstagramSettings()" style="padding: 0.4rem 1rem;">
+                    📱 Instagram Link
+                </button>
+                <a href="/logout" class="btn btn-reject" style="text-decoration: none; padding: 0.4rem 1rem;">🔓 Logout</a>
+            </div>
+        </header>
+
+        <!-- INSTAGRAM SETTINGS DYNAMIC EXPAND PANEL -->
+        <div id="instagram-settings-panel" class="glass-panel" style="display: none; margin-top: -1rem; animation: slideDown 0.4s cubic-bezier(0.25, 0.8, 0.25, 1); flex-direction: column; gap: 1rem; border-color: rgba(0, 240, 255, 0.3);">
+            <h3 style="color: var(--accent-cyan); font-size: 1.1rem; display: flex; align-items: center; gap: 0.5rem;">📱 Connect Instagram Account</h3>
+            <p style="font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 0.5rem;">
+                Provide your Instagram username and password. The agent will cache session settings to prevent account challenge checkpoints.
+            </p>
+            <div style="display: flex; flex-wrap: wrap; gap: 1rem; align-items: flex-end;">
+                <div style="flex: 1; min-width: 200px;">
+                    <label class="stat-title" style="font-size: 0.75rem; display: block; margin-bottom: 0.4rem;">Instagram Username (no @)</label>
+                    <input type="text" id="ig-username-input" placeholder="e.g. animelover" style="width: 100%; background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08); border-radius: 8px; color: white; padding: 0.6rem 1rem; font-family: inherit; font-size: 0.9rem;" autocomplete="off">
+                </div>
+                <div style="flex: 1; min-width: 200px;">
+                    <label class="stat-title" style="font-size: 0.75rem; display: block; margin-bottom: 0.4rem;">Instagram Password</label>
+                    <input type="password" id="ig-password-input" placeholder="Enter password..." style="width: 100%; background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08); border-radius: 8px; color: white; padding: 0.6rem 1rem; font-family: inherit; font-size: 0.9rem;" autocomplete="off">
+                </div>
+                <button class="btn btn-approve" id="btn-save-ig" style="padding: 0.6rem 1.5rem; height: 38px;">Link Profile</button>
+            </div>
+            <div id="ig-status-info" style="font-size: 0.85rem; color: var(--text-secondary);">
+                Loading Instagram profile link status...
+            </div>
+        </div>
+
+        <!-- STATS / METRICS GRID -->
+        <div class="stats-grid">
+            <div class="glass-panel stat-card">
+                <div class="stat-title">Uptime</div>
+                <div class="stat-value">{{ status.uptime.split('.')[0] }}</div>
+                <div class="stat-footer">Started: {{ status.timestamp.split('T')[1].split('.')[0] }}</div>
+            </div>
+            <div class="glass-panel stat-card">
+                <div class="stat-title">Total Posts</div>
+                <div class="stat-value">{{ status.total_posts }}</div>
+                <div class="stat-footer">Instagram Graph API</div>
+            </div>
+            <div class="glass-panel stat-card">
+                <div class="stat-title">Avg Engagement</div>
+                <div class="stat-value">{{ status.avg_engagement }}%</div>
+                <div class="stat-footer">Goal: 8.5% or higher</div>
+            </div>
+            <div class="glass-panel stat-card">
+                <div class="stat-title">Best Content Style</div>
+                <div class="stat-value" style="font-size: 1.4rem; padding-top: 0.50rem;">
+                    {{ status.best_style.replace('_', ' ').upper() }}
+                </div>
+                <div class="stat-footer">Based on engagement</div>
+            </div>
+        </div>
+
+        <!-- MAIN LAYOUT -->
+        <div class="main-grid">
+            <!-- LEFT COLUMN: SCHEDULER, IDEAS, & REELS -->
+            <div style="display: flex; flex-direction: column; gap: 2rem;">
+                
+                <!-- CONTENT IDEAS APPROVAL SYSTEM -->
+                <div class="glass-panel">
+                    <h2 class="section-title">💡 Content Ideas for Approval</h2>
+                    <div class="ideas-list">
+                        {% if not pending_ideas %}
+                        <div style="text-align: center; color: var(--text-secondary); padding: 2rem 0;">
+                            No pending content ideas right now. Run <code>python main.py --ideas</code> to generate some!
+                        </div>
+                        {% endif %}
+                        
+                        {% for idea in pending_ideas %}
+                        <div class="idea-card" id="idea-card-{{ idea.id }}">
+                            <div class="idea-header">
+                                <div class="idea-title">{{ idea.title }}</div>
+                                <span class="style-badge">{{ idea.style.replace('_', ' ') }}</span>
+                            </div>
+                            <div class="idea-story">{{ idea.story }}</div>
+                            <div class="idea-actions">
+                                {% if idea.status == 'approved' %}
+                                <button class="btn btn-generate" onclick="generateReel({{ idea.id }})">
+                                    🎬 Compile Reel
+                                </button>
+                                {% else %}
+                                <button class="btn btn-reject" onclick="rejectIdea({{ idea.id }})">
+                                    ❌ Reject
+                                </button>
+                                <button class="btn btn-approve" onclick="approveIdea({{ idea.id }})">
+                                    ✓ Approve
+                                </button>
+                                {% endif %}
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+
+                <!-- WEEKLY PLANNER SCHEDULE -->
+                <div class="glass-panel">
+                    <h2 class="section-title">📅 Weekly Content Schedule</h2>
+                    <div class="schedule-list">
+                        {% if not schedule %}
+                        <div style="text-align: center; color: var(--text-secondary); padding: 1rem 0;">
+                            No active calendar planned.
+                        </div>
+                        {% endif %}
+                        {% for item in schedule %}
+                        <div class="schedule-item">
+                            <span class="schedule-day">{{ item.day }}</span>
+                            <span class="schedule-style">{{ item.style.replace('_', ' ').title() }}</span>
+                            <span style="font-size: 0.85rem; color: var(--text-secondary);">{{ item.post_time }}</span>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+
+                <!-- REELS COMPILATIONS ARCHIVE -->
+                <div class="glass-panel">
+                    <h2 class="section-title">🎬 Compiled Reels Archive</h2>
+                    {% if not posts %}
+                    <div style="text-align: center; color: var(--text-secondary); padding: 3rem 0;">
+                        No compiled videos found. Approve an idea and click "Compile Reel" to generate your first content asset!
+                    </div>
+                    {% else %}
+                    <div class="reels-grid">
+                        {% for post in posts %}
+                        <div class="glass-panel reel-card" id="post-card-{{ post.id }}">
+                            <div class="video-container">
+                                <video controls preload="metadata">
+                                    <source src="/videos/{{ post.video_path.split('/')[-1].split('\\')[-1] }}" type="video/mp4">
+                                    Your browser does not support the video tag.
+                                </video>
+                            </div>
+                            <div class="reel-info">
+                                <div class="reel-title">{{ post.title }}</div>
+                                <div class="reel-style">{{ post.style.replace('_', ' ').title() }}</div>
+                                <div class="reel-caption">{{ post.caption }}</div>
+                                
+                                <div class="post-deploy-action" style="margin-top: 1rem; border-top: 1px solid rgba(255,255,255,0.05); padding-top: 0.75rem; display: flex; justify-content: space-between; align-items: center;">
+                                    {% if post.instagram_id and post.instagram_id != 'None' %}
+                                    <span class="style-badge" style="background: rgba(57, 255, 20, 0.15); border-color: var(--accent-green); color: #9bff8c; text-transform: none; font-size: 0.7rem; width: 100%; text-align: center; padding: 0.4rem;">
+                                        🚀 Posted to IG ID: {{ post.instagram_id }}
+                                    </span>
+                                    {% else %}
+                                    <button class="btn btn-approve btn-deploy" onclick="deployToInstagram({{ post.id }})" style="width: 100%; justify-content: center; font-size: 0.8rem; padding: 0.5rem;">
+                                        🚀 Deploy to Instagram
+                                    </button>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    {% endif %}
+                </div>
+
+                <!-- 🚀 VIDEO CO-PILOT UPLOAD & AI CO-CREATOR -->
+                <div class="glass-panel" style="margin-top: 2rem;">
+                    <h2 class="section-title">🚀 Multimodal Video Co-Pilot</h2>
+                    <p style="font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 1rem;">
+                        Upload a video clip. Gemini will analyze the visual narrative sequence, recommend a formatting layout (Reel vs. Post), and write custom progressive subtitle edits.
+                    </p>
+                    
+                    <!-- UPLOAD SECTION -->
+                    <div id="copilot-upload-area" style="border: 2px dashed rgba(0, 240, 255, 0.25); border-radius: 12px; padding: 2rem; text-align: center; cursor: pointer; transition: all 0.3s ease; background: rgba(0, 0, 0, 0.1);" ondragover="event.preventDefault()" ondrop="handleVideoDrop(event)">
+                        <span style="font-size: 2.5rem; display: block; margin-bottom: 0.75rem;">📁</span>
+                        <span style="font-weight: 600; display: block; margin-bottom: 0.25rem;">Drag & Drop Video File</span>
+                        <span style="font-size: 0.8rem; color: var(--text-secondary);">or click to select file (.mp4 format)</span>
+                        <input type="file" id="copilot-file-input" accept="video/mp4" style="display: none;" onchange="handleVideoFileSelect(event)">
+                    </div>
+
+                    <!-- KEYFRAMES & ANALYSIS LOADER -->
+                    <div id="copilot-analysis-panel" style="display: none; flex-direction: column; gap: 1rem; margin-top: 1.5rem; animation: slideDown 0.4s ease;">
+                        
+                        <div style="font-size: 0.9rem; font-weight: bold; color: var(--accent-cyan); display: flex; align-items: center; justify-content: space-between;">
+                            <span>✓ Upload complete: temp_input.mp4</span>
+                            <button class="btn btn-reject" onclick="resetCopilot()" style="padding: 0.2rem 0.6rem; font-size: 0.75rem; border-radius: 4px;">Clear</button>
+                        </div>
+                        
+                        <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 0.5rem;" id="copilot-keyframes-grid">
+                            <!-- Dynamically populated -->
+                        </div>
+
+                        <div style="display: flex; flex-direction: column; gap: 0.4rem;">
+                            <label class="stat-title" style="font-size: 0.75rem;">AI Editor Directive / Style Choice</label>
+                            <input type="text" id="copilot-instruction-input" placeholder="e.g. Make it a dramatic quote post, match Bollywood romantic music" style="width: 100%; background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08); border-radius: 8px; color: white; padding: 0.6rem 1rem; font-family: inherit; font-size: 0.9rem;" value="make a high-energy fight montage with bold action typography">
+                        </div>
+
+                        <button class="btn btn-generate" id="btn-copilot-analyze" style="justify-content: center; font-size: 0.95rem; font-weight: 700; padding: 0.6rem; background: linear-gradient(135deg, #00f0ff, #7000ff); border: none;">
+                            🔍 Analyze Video with Gemini
+                        </button>
+                    </div>
+
+                    <!-- GEMINI SCRIPT APPROVAL PANEL -->
+                    <div id="copilot-script-panel" style="display: none; flex-direction: column; gap: 1rem; margin-top: 1.5rem; border-top: 1px solid rgba(255,255,255,0.08); padding-top: 1.5rem; animation: slideDown 0.4s ease;">
+                        <h3 style="color: var(--accent-green); font-size: 1rem;">📝 Gemini Suggested Edit Script</h3>
+                        
+                        <div class="idea-card" style="margin: 0; background: rgba(0, 0, 0, 0.25);">
+                            <div style="font-size: 0.9rem; font-weight: bold; color: white; margin-bottom: 0.4rem;" id="copilot-script-title">Title</div>
+                            <div style="font-size: 0.8rem; color: var(--accent-cyan); margin-bottom: 0.6rem;" id="copilot-script-theme">Theme: ...</div>
+                            <div style="font-size: 0.8rem; color: var(--text-secondary); margin-bottom: 0.6rem; font-style: italic;" id="copilot-script-music">Music suggestion: ...</div>
+                            
+                            <div style="display: flex; flex-direction: column; gap: 0.5rem; margin: 0.75rem 0;" id="copilot-script-subtitles">
+                                <!-- list of lines -->
+                            </div>
+
+                            <div style="font-size: 0.85rem; color: var(--text-secondary); border-top: 1px solid rgba(255,255,255,0.05); padding-top: 0.5rem;" id="copilot-script-caption">Caption: ...</div>
+                        </div>
+
+                        <button class="btn btn-approve" id="btn-copilot-compile" style="justify-content: center; font-size: 0.95rem; font-weight: 700; padding: 0.65rem;">
+                            🎬 Compile Masterpiece
+                        </button>
+
+                        <!-- CO-PILOT PROGRESS BAR -->
+                        <div id="copilot-progress-container" style="display: none; flex-direction: column; gap: 0.5rem; margin-top: 1rem; padding: 1rem; background: rgba(255,255,255,0.03); border-radius: 8px; border: 1px solid rgba(0, 240, 255, 0.15); animation: fadeIn 0.3s ease;">
+                            <div style="display: flex; justify-content: space-between; font-size: 0.8rem; margin-bottom: 0.25rem;">
+                                <span style="color: var(--accent-cyan); font-weight: bold;" id="copilot-progress-stage">Starting synthesis...</span>
+                                <span style="color: white; font-weight: bold;" id="copilot-progress-percent">0%</span>
+                            </div>
+                            <div style="width: 100%; height: 10px; background: rgba(0, 0, 0, 0.4); border-radius: 5px; overflow: hidden; border: 1px solid rgba(255,255,255,0.05);">
+                                <div id="copilot-progress-bar" style="width: 0%; height: 100%; background: linear-gradient(90deg, #00f0ff, #7000ff); transition: width 0.4s ease; border-radius: 5px;"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+
+            <!-- RIGHT COLUMN: STREAMING CONSOLE, VOICE, & DYNAMIC MEMORY -->
+            <div style="display: flex; flex-direction: column; gap: 2rem;">
+                
+                <!--🎙️ AUDIO SPEECH & VOICE CHAT CORE -->
+                <div class="glass-panel">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.25rem;">
+                        <h2 class="section-title" style="margin: 0;">🎙️ Audio Voice Terminal</h2>
+                        <!-- God-level Audio Equalizer Animation -->
+                        <div class="equalizer-bar" id="audio-equalizer">
+                            <span></span>
+                            <span></span>
+                            <span></span>
+                            <span></span>
+                            <span></span>
+                        </div>
+                    </div>
+                    
+                    <div class="voice-controls" style="display: flex; flex-direction: column; gap: 0.75rem; margin-bottom: 1rem;">
+                        <button class="btn" id="btn-live-talk" style="justify-content: center; font-size: 0.95rem; font-weight: 700; padding: 0.75rem; background: linear-gradient(135deg, #00f0ff, #7000ff); border: none; box-shadow: 0 0 15px rgba(0, 240, 255, 0.2); transition: all 0.3s ease; color: white;">
+                            🎙️ Start Gemini Live (Real-time Voice)
+                        </button>
+                        
+                        <div id="live-talk-status" style="display: none; align-items: center; justify-content: center; gap: 0.5rem; font-size: 0.85rem; color: #ff3366; animation: blink 1.5s infinite; margin-top: 0.25rem;">
+                            <span style="display: inline-block; width: 8px; height: 8px; background: #ff3366; border-radius: 50%; box-shadow: 0 0 8px #ff3366;"></span>
+                            <span>Live session active. Speak freely...</span>
+                        </div>
+
+                        <div style="display: flex; gap: 1rem; margin-top: 0.25rem;">
+                            <button class="btn btn-approve" id="btn-voice-toggle" style="flex: 1;">
+                                🔊 Voice: ENABLED
+                            </button>
+                            <button class="btn btn-reject" id="btn-voice-stop" style="flex: 0.5;">
+                                🛑 Stop Speech
+                            </button>
+                        </div>
+                    </div>
+                    <div class="voice-chat-box" style="display: flex; flex-direction: column; height: 260px; background: rgba(0,0,0,0.2); border-radius: 10px; border: 1px solid rgba(255,255,255,0.03); overflow: hidden; margin-bottom: 0.75rem;">
+                        <div class="voice-chat-history" id="voice-chat-history" style="flex: 1; overflow-y: auto; padding: 1rem; display: flex; flex-direction: column; gap: 0.75rem; font-size: 0.9rem; line-height: 1.4;">
+                            <div style="color: var(--accent-cyan);">REEL GOD: "Greetings, Commander. How can I assist you today? I will respond verbally."</div>
+                        </div>
+                        <div class="voice-chat-input-bar" style="display: flex; border-top: 1px solid rgba(255,255,255,0.05); padding: 0.5rem; background: rgba(0,0,0,0.1);">
+                            <input type="text" id="voice-chat-input" placeholder="Speak or type command..." style="flex: 1; background: transparent; border: none; outline: none; color: white; padding: 0.5rem; font-family: inherit; font-size: 0.9rem;" autocomplete="off">
+                            <button class="btn btn-approve" id="btn-voice-send" style="padding: 0.4rem 1rem; border-radius: 6px;">Send</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 🧠 PERSISTENT MEMORY & LEARNING CORE -->
+                <div class="glass-panel">
+                    <h2 class="section-title">🧠 Agent Learning Memory</h2>
+                    <div class="memory-input-bar" style="display: flex; flex-direction: column; gap: 0.5rem; margin-bottom: 1rem;">
+                        <input type="text" id="rule-input" placeholder="Teach rule (e.g. 'Use aesthetic dark borders')" style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08); border-radius: 8px; color: white; padding: 0.75rem 1rem; font-family: inherit; font-size: 0.9rem;" autocomplete="off">
+                        <button class="btn btn-approve" id="btn-add-rule" style="justify-content: center;">🧠 Add to Agent Memory</button>
+                    </div>
+                    <div class="rules-list" id="rules-list" style="display: flex; flex-direction: column; gap: 0.75rem; max-height: 250px; overflow-y: auto;">
+                        {% for r in rules %}
+                        <div class="schedule-item rule-card-item" id="rule-item-{{ r.id }}" style="align-items: flex-start; flex-direction: column; gap: 0.4rem; padding: 0.75rem; animation: slideIn 0.3s ease;">
+                            <div style="font-size: 0.9rem; font-weight: 500; color: white; word-break: break-word;">{{ r.rule }}</div>
+                            <div style="display: flex; justify-content: space-between; width: 100%; align-items: center; margin-top: 0.25rem;">
+                                <span style="font-size: 0.7rem; color: var(--text-secondary);">Taught: {{ r.created_at.split(' ')[0] }}</span>
+                                <button class="btn btn-reject" onclick="deleteRule({{ r.id }})" style="padding: 0.2rem 0.6rem; font-size: 0.75rem; border-radius: 4px;">Delete</button>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+
+                <!-- PROCESS MONITOR CONSOLE -->
+                <div class="glass-panel console-panel" style="flex: 1; min-height: 280px;">
+                    <div class="console-header">
+                        <span class="console-title">PROCESS_MONITOR_CONSOLE</span>
+                        <div style="display: flex; gap: 6px;">
+                            <span style="width: 8px; height: 8px; border-radius: 50%; background: #ff5f56;"></span>
+                            <span style="width: 8px; height: 8px; border-radius: 50%; background: #ffbd2e;"></span>
+                            <span style="width: 8px; height: 8px; border-radius: 50%; background: #27c93f;"></span>
+                        </div>
+                    </div>
+                    <div class="console-body" id="console-body">
+                        <div class="log-line success">REEL GOD console streaming active...</div>
+                        <div class="log-line dim">Awaiting command briefing or compilation task...</div>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </div>
+</body>
+</html>
