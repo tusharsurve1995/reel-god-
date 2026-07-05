@@ -236,38 +236,91 @@
                     </div>
                 </div>
 
-                <!-- REELS COMPILATIONS ARCHIVE -->
+                <!-- REELS COMPILATIONS ARCHIVE & STORYBOARD TRACKER -->
                 <div class="glass-panel">
-                    <h2 class="section-title">🎬 Compiled Reels Archive</h2>
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; border-bottom: 1px solid rgba(255,255,255,0.05); padding-bottom: 0.75rem;">
+                        <h2 class="section-title" style="margin: 0;">🎬 Storyboard &amp; Posting Tracker</h2>
+                        <span class="style-badge" style="background: rgba(0, 240, 255, 0.15); border-color: var(--accent-cyan); color: var(--accent-cyan); text-transform: uppercase;">🔥 HD+ MOTIVATIONAL CONTENT</span>
+                    </div>
                     {% if not posts %}
                     <div style="text-align: center; color: var(--text-secondary); padding: 3rem 0;">
-                        No compiled videos found. Approve an idea and click "Compile Reel" to generate your first content asset!
+                        No compiled videos found. Approve an idea and click "Compile Reel" to generate your first motivational content!
                     </div>
                     {% else %}
-                    <div class="reels-grid">
+                    <div class="reels-grid" style="display: grid; grid-template-columns: 1fr; gap: 2rem;">
                         {% for post in posts %}
-                        <div class="glass-panel reel-card" id="post-card-{{ post.id }}">
-                            <div class="video-container">
-                                <video controls preload="metadata">
+                        <div class="glass-panel reel-card" id="post-card-{{ post.id }}" style="display: flex; flex-direction: row; gap: 1.5rem; background: rgba(255,255,255,0.02); border-color: rgba(255,255,255,0.05); padding: 1.5rem; align-items: flex-start; flex-wrap: wrap; hover: none;">
+                            <!-- Video Player Section -->
+                            <div class="video-container" style="flex: 1; min-width: 280px; max-width: 320px; border-radius: 12px; overflow: hidden; border: 1px solid rgba(255,255,255,0.08); box-shadow: 0 4px 20px rgba(0,0,0,0.3);">
+                                <video controls preload="metadata" style="width: 100%; display: block; aspect-ratio: 9/16; object-fit: cover;">
                                     <source src="/videos/{{ post.video_path.split('/')[-1].split('\\')[-1] }}" type="video/mp4">
                                     Your browser does not support the video tag.
                                 </video>
                             </div>
-                            <div class="reel-info">
-                                <div class="reel-title">{{ post.title }}</div>
-                                <div class="reel-style">{{ post.style.replace('_', ' ').title() }}</div>
-                                <div class="reel-caption">{{ post.caption }}</div>
+                            
+                            <!-- Reel Info & Tracker Panel -->
+                            <div class="reel-info" style="flex: 2; min-width: 320px; display: flex; flex-direction: column; gap: 1rem;">
+                                <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.5rem;">
+                                    <div class="reel-title" style="font-size: 1.25rem; font-weight: 700; color: white;">{{ post.title }}</div>
+                                    <div style="display: flex; gap: 0.5rem; align-items: center;">
+                                        <span class="style-badge" style="background: rgba(189, 0, 255, 0.15); border-color: var(--accent-purple); color: #e099ff;">{{ post.style.replace('_', ' ').upper() }}</span>
+                                        {% if post.is_posted %}
+                                        <span class="style-badge" style="background: rgba(57, 255, 20, 0.15); border-color: var(--accent-green); color: #9bff8c;">Posted 🚀</span>
+                                        {% else %}
+                                        <span class="style-badge" style="background: rgba(255, 255, 255, 0.1); border-color: rgba(255,255,255,0.3); color: #ccc;">Draft 📋</span>
+                                        {% endif %}
+                                    </div>
+                                </div>
                                 
-                                <div class="post-deploy-action" style="margin-top: 1rem; border-top: 1px solid rgba(255,255,255,0.05); padding-top: 0.75rem; display: flex; justify-content: space-between; align-items: center;">
-                                    {% if post.instagram_id and post.instagram_id != 'None' %}
-                                    <span class="style-badge" style="background: rgba(57, 255, 20, 0.15); border-color: var(--accent-green); color: #9bff8c; text-transform: none; font-size: 0.7rem; width: 100%; text-align: center; padding: 0.4rem;">
-                                        🚀 Posted to IG ID: {{ post.instagram_id }}
-                                    </span>
-                                    {% else %}
-                                    <button class="btn btn-approve btn-deploy" onclick="deployToInstagram({{ post.id }})" style="width: 100%; justify-content: center; font-size: 0.8rem; padding: 0.5rem;">
-                                        🚀 Deploy to Instagram
-                                    </button>
-                                    {% endif %}
+                                <div class="reel-caption" style="font-size: 0.9rem; color: var(--text-secondary); line-height: 1.4; padding: 0.75rem; background: rgba(0,0,0,0.25); border-radius: 8px; border: 1px solid rgba(255,255,255,0.03);">{{ post.caption }}</div>
+                                
+                                <!-- Music Assistant -->
+                                <div style="font-size: 0.85rem; padding: 0.6rem 0.9rem; background: rgba(0, 240, 255, 0.05); border: 1px dashed rgba(0, 240, 255, 0.2); border-radius: 8px; color: var(--accent-cyan);">
+                                    🎵 <b>Instagram Audio Recommendation</b>:<br>
+                                    Search for: <code style="color: white; font-family: monospace;">{{ post.music_track.split('\\')[-1].split('/')[-1].split('.')[0].replace('_', ' ') if post.music_track else 'Motivational Anime Epic Piano OST' }}</code>
+                                </div>
+                                
+                                <!-- Feedback & Analytics Tracker -->
+                                <div style="border-top: 1px solid rgba(255,255,255,0.06); padding-top: 1rem; display: flex; flex-direction: column; gap: 0.75rem;">
+                                    <div style="font-weight: 600; font-size: 0.95rem; color: white;">📊 Storyboard Status &amp; Analytics Tracker</div>
+                                    
+                                    <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.25rem;">
+                                        <input type="checkbox" class="metrics-status" id="status-check-{{ post.id }}" {% if post.is_posted %}checked{% endif %} style="width: 16px; height: 16px; accent-color: var(--accent-cyan); cursor: pointer;">
+                                        <label for="status-check-{{ post.id }}" style="font-size: 0.85rem; color: var(--text-secondary); cursor: pointer; user-select: none;">Published to Instagram Profile</label>
+                                    </div>
+                                    
+                                    <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 0.75rem;">
+                                        <div>
+                                            <label style="font-size: 0.7rem; color: var(--text-secondary); display: block; margin-bottom: 0.25rem;">Views</label>
+                                            <input type="number" class="metrics-views" value="{{ post.views }}" style="width: 100%; padding: 0.4rem 0.6rem; font-family: inherit; font-size: 0.85rem; border-radius: 6px; border: 1px solid rgba(255,255,255,0.08); background: rgba(0,0,0,0.2); color: white;">
+                                        </div>
+                                        <div>
+                                            <label style="font-size: 0.7rem; color: var(--text-secondary); display: block; margin-bottom: 0.25rem;">Likes</label>
+                                            <input type="number" class="metrics-likes" value="{{ post.likes }}" style="width: 100%; padding: 0.4rem 0.6rem; font-family: inherit; font-size: 0.85rem; border-radius: 6px; border: 1px solid rgba(255,255,255,0.08); background: rgba(0,0,0,0.2); color: white;">
+                                        </div>
+                                        <div>
+                                            <label style="font-size: 0.7rem; color: var(--text-secondary); display: block; margin-bottom: 0.25rem;">Comments</label>
+                                            <input type="number" class="metrics-comments" value="{{ post.comments }}" style="width: 100%; padding: 0.4rem 0.6rem; font-family: inherit; font-size: 0.85rem; border-radius: 6px; border: 1px solid rgba(255,255,255,0.08); background: rgba(0,0,0,0.2); color: white;">
+                                        </div>
+                                        <div>
+                                            <label style="font-size: 0.7rem; color: var(--text-secondary); display: block; margin-bottom: 0.25rem;">Saves</label>
+                                            <input type="number" class="metrics-saves" value="{{ post.saves }}" style="width: 100%; padding: 0.4rem 0.6rem; font-family: inherit; font-size: 0.85rem; border-radius: 6px; border: 1px solid rgba(255,255,255,0.08); background: rgba(0,0,0,0.2); color: white;">
+                                        </div>
+                                    </div>
+                                    
+                                    <div>
+                                        <label style="font-size: 0.7rem; color: var(--text-secondary); display: block; margin-bottom: 0.25rem;">Performance Feedback / Audience Notes</label>
+                                        <textarea class="metrics-feedback" rows="2" placeholder="e.g. Video did very well. Comments were highly positive about the Rock Lee quote." style="width: 100%; padding: 0.5rem; font-family: inherit; font-size: 0.85rem; border-radius: 6px; border: 1px solid rgba(255,255,255,0.08); background: rgba(0,0,0,0.2); color: white; resize: none;">{{ post.feedback or '' }}</textarea>
+                                    </div>
+                                    
+                                    <div style="display: flex; gap: 0.75rem;">
+                                        <button class="btn btn-approve" onclick="savePostPerformance({{ post.id }})" style="flex: 1; justify-content: center; font-size: 0.85rem; padding: 0.5rem; font-weight: 600;">
+                                            💾 Save Tracker Metrics &amp; Feedback
+                                        </button>
+                                        <button class="btn btn-deploy" onclick="deployToInstagram({{ post.id }})" style="justify-content: center; font-size: 0.85rem; padding: 0.5rem; font-weight: 600; display: flex; align-items: center; gap: 0.25rem;">
+                                            🚀 Direct Post to IG
+                                        </button>
+                                    </div>
                                 </div>
                             </div>
                         </div>

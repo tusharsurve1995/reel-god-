@@ -480,6 +480,34 @@ def instagram_publish():
     thread.start()
     return jsonify({"success": True, "message": "Reel upload process initiated."})
 
+@app.route('/api/post/<int:post_id>/performance', methods=['POST'])
+@login_required
+def update_post_performance(post_id):
+    """Save user-reported metrics and feedback for a post."""
+    data = request.json or {}
+    views = int(data.get("views") or 0)
+    likes = int(data.get("likes") or 0)
+    comments = int(data.get("comments") or 0)
+    saves = int(data.get("saves") or 0)
+    feedback = (data.get("feedback") or "").strip()
+    is_posted = int(data.get("is_posted") or 0)
+    
+    brain = get_brain()
+    try:
+        brain.memory.update_post_performance_and_feedback(
+            post_id=post_id,
+            views=views,
+            likes=likes,
+            comments=comments,
+            saves=saves,
+            feedback=feedback,
+            is_posted=is_posted
+        )
+        brain.log(f"Commander updated performance metrics for Post #{post_id}", style="green")
+        return jsonify({"success": True, "message": "Performance metrics saved successfully."})
+    except Exception as e:
+        return jsonify({"success": False, "error": str(e)}), 500
+
 def _extract_keyframes(video_path: Path, temp_dir: Path) -> list:
     """Extract 4 keyframes from a video clip at even intervals."""
     from moviepy.editor import VideoFileClip

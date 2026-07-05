@@ -1229,4 +1229,30 @@ document.addEventListener('DOMContentLoaded', () => {
             if (btn) { btn.disabled = false; btn.innerHTML = '✨ Create'; }
         }
     });
+
+    window.savePostPerformance = (postId) => {
+        const card = document.getElementById(`post-card-${postId}`);
+        const views = parseInt(card.querySelector('.metrics-views').value) || 0;
+        const likes = parseInt(card.querySelector('.metrics-likes').value) || 0;
+        const comments = parseInt(card.querySelector('.metrics-comments').value) || 0;
+        const saves = parseInt(card.querySelector('.metrics-saves').value) || 0;
+        const feedback = card.querySelector('.metrics-feedback').value || '';
+        const isPosted = card.querySelector('.metrics-status').checked ? 1 : 0;
+        
+        fetch(`/api/post/${postId}/performance`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ views, likes, comments, saves, feedback, is_posted: isPosted })
+        })
+        .then(r => r.json())
+        .then(data => {
+            if (data.success) {
+                alert("Story posting metrics saved! Memory updated.");
+                window.location.reload();
+            } else {
+                alert("Failed to save: " + data.error);
+            }
+        })
+        .catch(e => alert("Connection error: " + e));
+    };
 });

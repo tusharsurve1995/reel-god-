@@ -80,6 +80,8 @@ class AgentMemory:
                     shares          INTEGER DEFAULT 0,
                     reach           INTEGER DEFAULT 0,
                     engagement_rate REAL DEFAULT 0.0,
+                    feedback        TEXT,
+                    is_posted       INTEGER DEFAULT 0,
                     last_updated    TEXT DEFAULT (datetime('now'))
                 );
 
@@ -154,6 +156,14 @@ class AgentMemory:
                     post_id         INTEGER REFERENCES posts(id)
                 );
             """)
+            try:
+                conn.execute("ALTER TABLE posts ADD COLUMN feedback TEXT;")
+            except sqlite3.OperationalError:
+                pass
+            try:
+                conn.execute("ALTER TABLE posts ADD COLUMN is_posted INTEGER DEFAULT 0;")
+            except sqlite3.OperationalError:
+                pass
 
     # ──────────────────────────────────────────────────────────────────────
     #  CONTENT IDEAS
@@ -508,6 +518,37 @@ class AgentMemory:
                    SET views = ?, likes = ?, comments = ?, saves = ?, shares = ?, reach = ?, engagement_rate = ?, last_updated = datetime('now')
                    WHERE id = ?""",
                 (views, likes, comments, saves, shares, reach, engagement_rate, post_id)
+            )
+
+            # Update style performance aggregator table
+            row = conn.execute("SELECT style FROM posts WHERE id = ?", (post_id,)).fetchone()
+            if row:
+                style = row["style"]
+                # Re-calculate averages for this style
+                style_rows = conn.execute(
+                    """SELECT AVG(views) as av, AVG(likes) as al, AVG(saves) as asv, AVG(engagement_rate) as ae, COUNT(id) as cnt
+                       FROM posts WHERE style = ?""", (style,)
+                ).fetchone()
+                
+                if style_rows and style_rows["cnt"] > 0:
+                    conn.execute(
+                        """INSERT OR REPLACE INTO style_performance (style, avg_views, avg_likes, avg_saves, avg_engagement, post_count, last_updated)
+                           VALUES (?, ?, ?, ?, ?, ?, datetime('now'))""",
+                        (style, style_rows["av"] or 0.0, style_rows["al"] or 0.0, style_rows["asv"] or 0.0, style_rows["ae"] or 0.0, style_rows["cnt"])
+                    )
+
+    def update_post_performance_and_feedback(self, post_id: int, views: int, likes: int, comments: int, saves: int, feedback: str, is_posted: int):
+        """Update a post's status, manual feedback, and metrics."""
+        engagement_rate = 0.0
+        if views > 0:
+            engagement_rate = round(((likes + comments) / views) * 100, 2)
+
+        with self._connect() as conn:
+            conn.execute(
+                """UPDATE posts
+                   SET views = ?, likes = ?, comments = ?, saves = ?, feedback = ?, is_posted = ?, engagement_rate = ?, last_updated = datetime('now')
+                   WHERE id = ?""",
+                (views, likes, comments, saves, feedback, is_posted, engagement_rate, post_id)
             )
 
             # Update style performance aggregator table

@@ -134,11 +134,7 @@ VIDEO_CODEC = "libx264"
 # ─────────────────────────────────────────────
 # Default anime styles REEL GOD will cycle through
 CONTENT_STYLES = [
-    "dark_cinematic",   # Dark, moody, atmospheric (AoT, Berserk vibes)
-    "emotional",        # Sad, bittersweet, touching (Your Lie in April)
-    "epic_action",      # High-energy battles (Demon Slayer, Jujutsu Kaisen)
-    "mystical",         # Fantasy, magical, otherworldly (Frieren, Mushishi)
-    "motivational",     # Uplifting, powerful quotes with visuals
+    "motivational",     # Uplifting, powerful quotes with visuals (Naruto, Rock Lee, etc.)
 ]
 
 # Gemini model to use (gemini-2.5-flash is fastest & free)
