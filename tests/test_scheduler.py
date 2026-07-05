@@ -21,6 +21,7 @@ if str(project_root) not in sys.path:
 import config
 from brain.core import ReelGodBrain
 from main import check_scheduled_posts
+from instagram.publisher import InstagramPublisher
 
 
 class TestSchedulerPipeline(unittest.TestCase):
@@ -58,6 +59,14 @@ class TestSchedulerPipeline(unittest.TestCase):
             
         ReelGodBrain.generate_video_content = mock_generate_video_content
         
+        # Stub the Instagram publisher to avoid real logins during unit testing
+        self.original_publish_method = InstagramPublisher.publish_reel
+        
+        def mock_publish_reel(pub_self, video_path, caption):
+            return "mock_instagram_media_id"
+            
+        InstagramPublisher.publish_reel = mock_publish_reel
+        
         # Initialize Core Brain
         self.brain = ReelGodBrain()
 
@@ -65,8 +74,9 @@ class TestSchedulerPipeline(unittest.TestCase):
         # Restore configuration
         config.DB_PATH = self.original_db_path
         
-        # Restore stubbed method
+        # Restore stubbed methods
         ReelGodBrain.generate_video_content = self.original_generate_method
+        InstagramPublisher.publish_reel = self.original_publish_method
         
         # Clean up temporary test files
         try:
