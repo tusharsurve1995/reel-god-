@@ -19,8 +19,9 @@ Every AI assistant taking over this codebase **MUST** strictly adhere to the fol
 
 * **Active Repository**: `https://github.com/tusharsurve1995/reel-god-` (⚠️ **NOTE**: Must include the trailing hyphen `-`). The repository `reel-god` (without the hyphen) is outdated and unused.
 * **Production Cloud Host**: Deployed on **Render** (https://render.com) using the Infrastructure-as-Code `render.yaml` Blueprint file.
+  * **Production URL**: `https://reel-god.onrender.com` (Use this for daily mobile access!)
   * **Build Command**: `pip install -r requirements.txt`
-  * **Start Command**: `gunicorn --worker-class eventlet -w 1 dashboard.app:app --bind 0.0.0.0:$PORT --timeout 600`
+  * **Start Command**: `python dashboard/app.py`
   * **Environment Variable Requirements**: Requires `GEMINI_API_KEY` set in the Render environment settings.
 
 ---
