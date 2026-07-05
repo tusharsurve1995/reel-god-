@@ -11,7 +11,7 @@ document.addEventListener('DOMContentLoaded', () => {
         return;
     }
 
-    const socket = io();
+    const socket = io({ transports: ['websocket'] });
     const consoleBody = document.getElementById('console-body');
     const rulesList = document.getElementById('rules-list');
     
