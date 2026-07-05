@@ -7,9 +7,7 @@ services:
     runtime: python
     plan: free
     buildCommand: "pip install -r requirements.txt"
-    # ffmpeg is needed for video rendering; imageio-ffmpeg ships a static binary,
-    # so no system package is required on Render.
-    startCommand: "gunicorn --worker-class eventlet -w 1 dashboard.app:app --bind 0.0.0.0:$PORT --timeout 600"
+    startCommand: "python dashboard/app.py"
     healthCheckPath: /login
     envVars:
       - key: PYTHON_VERSION
