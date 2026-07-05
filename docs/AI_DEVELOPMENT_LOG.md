@@ -1,6 +1,17 @@
 # 🤖 REEL GOD — AI Agent Development & Deployment Log
 
-This document serves as a handoff log for any AI coding assistant (Antigravity, Windsurf, Devin, etc.) working on the **REEL GOD** project. It details the project's state, active repository, configurations, architectural decisions, and current deployment status.
+This document serves as the central handoff log for any AI coding assistant (Antigravity, Windsurf, Devin, etc.) working on the **REEL GOD** project. 
+
+---
+
+## ⚠️ CRITICAL RULES FOR INCOMING AI ASSISTANTS
+
+Every AI assistant taking over this codebase **MUST** strictly adhere to the following workflow:
+
+1. **READ BEFORE STARTING**: Before making any source code changes or running commands, read this document and `docs/STORYBOARD_TRACKER.md` fully. Understand the active repository and the architecture constraints (e.g. FFmpeg vs MoviePy, SQLite schema, mobile PWAs).
+2. **DOCUMENT YOUR WORK**: As you implement changes, update this log. Add a entry under the **Changelog** section detailing exactly what you changed, why you changed it, and how it improves the system.
+3. **PUSH TO GIT BEFORE LEAVING**: Before completing your turn/session, stage all files, write a clear descriptive commit message, and push your changes to the active GitHub repository (`https://github.com/tusharsurve1995/reel-god-`). Do not leave unstaged or uncommitted code behind.
+4. **SAFETY FIRST**: Always verify syntax correctness (e.g., `py -m py_compile`) and test the dashboard server locally before pushing. Prevent encoding crashes in Windows terminals by keeping console logs plain-text/ASCII-friendly.
 
 ---
 
@@ -53,3 +64,14 @@ This document serves as a handoff log for any AI coding assistant (Antigravity, 
   - Enhance the "Direct Post to IG" button to automate uploading when Instagram credentials are saved.
 - [ ] **Next Step: Self-Learning Loop**
   - Write a background processor that queries the SQLite database to analyze post engagement rates (Views vs. Likes/Saves) entered by the commander, adapting future script generation based on what goes viral.
+
+---
+
+## 📜 4. Handoff History & Changelog
+
+### July 5, 2026 (Antigravity Agent)
+* **Mobile & Cloud Deployment**: Configured and deployed the application to Render via `render.yaml` (Blueprint) pointing to the active repository `tusharsurve1995/reel-god-`.
+* **Mobile UX (Socket.IO Fix)**: Forced the Socket.IO client in `app.js` to connect using pure `websocket` transport, preventing infinite browser page loading spin on mobile Chrome.
+* **Storyboard Tracker UI**: Redesigned the "Compiled Reels Archive" template block into a glassmorphic Storyboard Tracker. Created a new SQLite migration inside `brain/memory.py` to support `is_posted` and `feedback` storage. Added interactive views/likes/saves/comments and notes saving capabilities to feed the self-learning loops.
+* **Console Safety**: Fixed a `UnicodeEncodeError` crash during server launch on Windows consoles by configuring `PYTHONIOENCODING=utf-8` on process boot and sanitizing terminal Panel emojis.
+* **Handoff Rules**: Defined strict rules requiring incoming assistants to read logs first, document their updates, verify stability, and push to GitHub before ending their turn.
