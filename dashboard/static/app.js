@@ -11,7 +11,16 @@ document.addEventListener('DOMContentLoaded', () => {
         return;
     }
 
-    const socket = io({ transports: ['websocket'] });
+    let socket;
+    if (typeof io !== 'undefined') {
+        socket = io({ transports: ['websocket'] });
+    } else {
+        console.error("Socket.IO client library not loaded. Real-time updates disabled.");
+        socket = {
+            on: (event, callback) => { console.warn(`Socket event listener registered for '${event}', but Socket.IO is offline.`); },
+            emit: (event, data) => { console.warn(`Socket event emit attempted for '${event}', but Socket.IO is offline.`); }
+        };
+    }
     const consoleBody = document.getElementById('console-body');
     const rulesList = document.getElementById('rules-list');
     
@@ -205,9 +214,13 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
 
-        // Initialize Audio Contexts
-        audioContext = new (window.AudioContext || window.webkitAudioContext)({ sampleRate: 16000 });
-        playbackContext = new (window.AudioContext || window.webkitAudioContext)({ sampleRate: 24000 });
+        // Audio Contexts are initialized synchronously on click gesture to satisfy browser security models.
+        if (!audioContext) {
+            audioContext = new (window.AudioContext || window.webkitAudioContext)({ sampleRate: 16000 });
+        }
+        if (!playbackContext) {
+            playbackContext = new (window.AudioContext || window.webkitAudioContext)({ sampleRate: 24000 });
+        }
 
         // Connect WebSocket
         const wssUrl = `wss://generativelanguage.googleapis.com/ws/google.ai.generativelanguage.v1beta.GenerativeService.BidiGenerateContent?key=${configData.api_key}`;
@@ -293,6 +306,13 @@ document.addEventListener('DOMContentLoaded', () => {
     async function startMicRecording() {
         try {
             const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+            
+            // Safety Check: If the session was closed/cleaned up while waiting for permission, stop immediately
+            if (!isLiveActive || !audioContext) {
+                stream.getTracks().forEach(track => track.stop());
+                return;
+            }
+            
             inputSource = audioContext.createMediaStreamSource(stream);
             
             // 4096 is a good chunk size for 16kHz
@@ -389,6 +409,27 @@ document.addEventListener('DOMContentLoaded', () => {
                 cleanupLiveTalk();
             } else {
                 window.speechSynthesis.cancel();
+                
+                // Initialize/resume Audio Contexts synchronously on user click gesture
+                try {
+                    if (!audioContext) {
+                        audioContext = new (window.AudioContext || window.webkitAudioContext)({ sampleRate: 16000 });
+                    }
+                    if (!playbackContext) {
+                        playbackContext = new (window.AudioContext || window.webkitAudioContext)({ sampleRate: 24000 });
+                    }
+                    if (audioContext.state === 'suspended') {
+                        audioContext.resume();
+                    }
+                    if (playbackContext.state === 'suspended') {
+                        playbackContext.resume();
+                    }
+                } catch (audioErr) {
+                    console.error("AudioContext initialization failed:", audioErr);
+                    alert("Unable to access audio hardware. Please verify mic permission.");
+                    return;
+                }
+                
                 startLiveSession();
             }
         });
