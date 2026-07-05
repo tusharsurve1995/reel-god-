@@ -7,6 +7,7 @@ Includes custom authentication, voice speaking capabilities, and Instagram direc
 """
 
 import os
+os.environ.setdefault("PYTHONIOENCODING", "utf-8")
 import sys
 import threading
 from pathlib import Path
@@ -892,11 +893,11 @@ def start_dashboard():
     from rich.panel import Panel
 
     console.print(Panel(
-        f"[bold green]✓ Dashboard Server Active & Network-Accessible[/bold green]\n\n"
-        f"🖥️  [bold]On your PC:[/]       [cyan]http://127.0.0.1:{port}[/cyan]\n"
-        f"📱 [bold]On your Mobile:[/]   [cyan]http://{local_ip}:{port}[/cyan]\n\n"
+        f"[bold green]Dashboard Server Active & Network-Accessible[/bold green]\n\n"
+        f"On your PC:       [cyan]http://127.0.0.1:{port}[/cyan]\n"
+        f"On your Mobile:   [cyan]http://{local_ip}:{port}[/cyan]\n\n"
         f"[dim]Note: Ensure both your PC and Mobile are on the same Wi-Fi network![/dim]",
-        title="🚀 REEL GOD COMMAND DASHBOARD",
+        title="REEL GOD COMMAND DASHBOARD",
         border_style="green"
     ))
 

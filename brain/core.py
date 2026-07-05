@@ -45,11 +45,14 @@ class ReelGodBrain:
         self._booted_at = datetime.now()
         self.log_callback = None
 
+        import os
+        os.environ.setdefault("PYTHONIOENCODING", "utf-8")
+
         console.print(Panel(
             f"[bold cyan]{config.AGENT_NAME}[/bold cyan] v{config.AGENT_VERSION}\n"
             f"[dim]Brain initialized · Memory loaded · Gemini connected[/dim]\n"
             f"[dim]Model: {config.GEMINI_MODEL} · Started: {self._booted_at.strftime('%H:%M:%S')}[/dim]",
-            title="🤖 REEL GOD ONLINE",
+            title="REEL GOD ONLINE",
             border_style="cyan"
         ))
 
