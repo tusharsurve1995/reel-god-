@@ -73,6 +73,8 @@ Every AI assistant taking over this codebase **MUST** strictly adhere to the fol
 ### July 5, 2026 (Antigravity Agent)
 * **Mobile & Cloud Deployment**: Configured and deployed the application to Render via `render.yaml` (Blueprint) pointing to the active repository `tusharsurve1995/reel-god-`. Resolved Gunicorn+Eventlet entrypoint loader failures on Render by simplifying the start command to direct execution via `python dashboard/app.py`.
 * **Mobile UX (Socket.IO Fix)**: Forced the Socket.IO client in `app.js` to connect using pure `websocket` transport, preventing infinite browser page loading spin on mobile Chrome.
+* **Audio Voice Terminal Chat**: Restored the text chat box input and 'Send' button on the mobile UI by registering event listeners in `app.js` mapping to the backend `/api/voice-chat` endpoint. The agent now returns text replies and synthesizes them aloud via Text-to-Speech (TTS), allowing full conversational control over the application from your phone.
 * **Storyboard Tracker UI**: Redesigned the "Compiled Reels Archive" template block into a glassmorphic Storyboard Tracker. Created a new SQLite migration inside `brain/memory.py` to support `is_posted` and `feedback` storage. Added interactive views/likes/saves/comments and notes saving capabilities to feed the self-learning loops.
 * **Console Safety**: Fixed a `UnicodeEncodeError` crash during server launch on Windows consoles by configuring `PYTHONIOENCODING=utf-8` on process boot and sanitizing terminal Panel emojis.
 * **Handoff Rules**: Defined strict rules requiring incoming assistants to read logs first, document their updates, verify stability, and push to GitHub before ending their turn.
+

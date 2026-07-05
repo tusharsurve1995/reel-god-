@@ -1255,4 +1255,65 @@ document.addEventListener('DOMContentLoaded', () => {
         })
         .catch(e => alert("Connection error: " + e));
     };
+
+    // ── TEXT VOICE CHAT TERMINAL CONTROLLER ────────────────────────────────
+    function sendTextMessage() {
+        if (!voiceChatInput) return;
+        const msg = voiceChatInput.value.trim();
+        if (!msg) return;
+
+        // Display user message in chat history
+        appendTextMessage("user", msg);
+        voiceChatInput.value = "";
+
+        // Dispatch POST request to the local Flask chatbot API
+        fetch('/api/voice-chat', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ message: msg })
+        })
+        .then(res => {
+            if (!res.ok) throw new Error("HTTP " + res.status);
+            return res.json();
+        })
+        .then(data => {
+            if (data.success) {
+                // Render agent response and synthesize TTS speech audio
+                appendTextMessage("model", data.response);
+                speak(data.response);
+            } else {
+                appendTextMessage("system", "Error: " + data.error);
+            }
+        })
+        .catch(err => {
+            appendTextMessage("system", "Connection Error: " + err.message);
+        });
+    }
+
+    function appendTextMessage(sender, text) {
+        if (!voiceChatHistory) return;
+        const div = document.createElement("div");
+        const senderLabel = sender === "user" ? "Commander" : (sender === "model" ? "REEL GOD" : "SYSTEM");
+        const color = sender === "user" ? "#fff" : (sender === "model" ? "var(--accent-cyan)" : "#ff3366");
+        div.style.color = color;
+        div.style.marginBottom = "0.6rem";
+        div.style.lineHeight = "1.4";
+        div.style.fontSize = "0.9rem";
+        div.innerHTML = `<span style="font-weight: bold;">${senderLabel}:</span> <span>${text}</span>`;
+        voiceChatHistory.appendChild(div);
+        voiceChatHistory.scrollTop = voiceChatHistory.scrollHeight;
+    }
+
+    if (btnVoiceSend) {
+        btnVoiceSend.addEventListener('click', sendTextMessage);
+    }
+    
+    if (voiceChatInput) {
+        voiceChatInput.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                sendTextMessage();
+            }
+        });
+    }
 });
